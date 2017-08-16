@@ -6,7 +6,7 @@
 grab_home = {"x": 90.0, "y": -500.0, "z": 100.0, "rx": 0.0, "ry": 180.0, "rz": 0.0}
 grab_home_joints = {"x": 87.61, "y": -87.40, "z": 100.79, "rx": -103.37, "ry": -89.70, "rz": -2.26}
 
-end_effector_home = {"act": 80, "servo": 22, "tilt": 0, "vac": "r"}
+end_effector_home = {"act": 80, "servo": 80, "tilt": 0, "vac": "r"}
 
 shelf_home_joints = {"x": 33.41, "y": -104.42, "z": 97.62, "rx": -28.45, "ry": -59.48, "rz": -114.81}
 shelf_joints_waypoint = {"x": 105.47, "y": -94.31, "z": 132.37, "rx": -156.29, "ry": -34.20, "rz": -11.09}

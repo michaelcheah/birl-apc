@@ -8,13 +8,13 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds import socket_send, ur_move, safe_ur_move, safe_ur_move_only, get_position, get_force, get_torque
-from object_grasping import vac_stow, vac_pick, grab_stow, grab_pick, combined_pick, combined_stow, banana, fork
+from interface_cmds_copy import *
+from object_grasping_copy import *
 from ur_waypoints import *
 from vision_copy import *
 
 def naughts_crosses(c,ser_ee,ser_vac,start=0):
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
 
     z_height = z_cal(c,ser_ee,ser_vac)
 
@@ -39,17 +39,17 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
         print grid_state[3:6]
         print grid_state[6:9]
 
-        msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
 
     grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]-10,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
     
     while min(grid_state) == 0:
         # Wait for player move
@@ -75,7 +75,7 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
         print grid_state[0:3]
         print grid_state[3:6]
         print grid_state[6:9]
-        msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
         grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
         # Check game state
@@ -87,10 +87,10 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
 
         current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]-10,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-        msg = safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+        msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-        msg = safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+        msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     return ".....................Draw....................."
 
@@ -239,13 +239,13 @@ def read_grid(empty_grid_im,grid_image,grid):
 def z_cal(c,ser_ee,ser_vac):
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     object_height = 1000.0*float(safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
     
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
 
     return object_height+6
 
@@ -288,7 +288,7 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
 
     # Axis rotation matricies for grasping position, rotate around x-axis by aoa, then z-axis by ori
     #x_rot = np.matrix([[ 1.0, 0.0, 0.0],
@@ -334,10 +334,10 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
 
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
 
     msg = socket_send(c,sCMD=100)
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
 
 def nc_pick_move(grid_state):
     new_grid = copy.deepcopy(grid_state)
@@ -407,7 +407,7 @@ def nc_finish(grid_state):
     return win
 
 def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
 
     msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(tally_home_joints),CMD=2)
     dx=0
@@ -441,4 +441,144 @@ def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
 
     msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(tally_home_joints),CMD=2)
 
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+
+def clean_board(c,ser_ee,ser_vac):
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    object_height = 1000.0*float(safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
+
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Grip = {"act": 30, "servo": 80, "tilt": 0, "vac": 'r'}
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    demand_Grip["servo"]=0
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    
+    # Adjust actuator position
+    demand_Grip["act"]=40
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    '''
+    # Open grabber servo
+    demand_Grip["servo"]=80
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    
+    # Close grabber servo
+    demand_Grip["servo"]=0
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    time.sleep(0.2)
+    '''
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":40,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+
+    demand_Grip["act"]=40
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    # Rotate around y axis by orientation
+    # Convert to radians
+    angle_of_attack=89.9*math.pi/180.0
+    orientation=15.0*math.pi/180.0
+    thetay=135.0*math.pi/180.0
+    
+    # Cartesian rotation matrices to match grabbing_joints rotation
+    x_rot = np.matrix([[ 1.0, 0.0, 0.0],
+             [ 0.0, math.cos(math.pi/2), -math.sin(math.pi/2)],
+             [ 0.0, math.sin(math.pi/2), math.cos(math.pi/2)]]) # x_rot[rows][columns]
+    y_rot = np.matrix([[ math.cos(thetay), 0.0, -math.sin(thetay)],
+             [ 0.0, 1.0, 0.0],
+             [ math.sin(thetay), 0.0, math.cos(thetay)]]) # y_rot[rows][columns]
+    z_rot = np.matrix([[ math.cos(0.0), -math.sin(0.0), 0.0],
+             [ math.sin(0.0), math.cos(0.0), 0.0],
+             [ 0.0, 0.0, 1.0]]) # z_rot[rows][columns]
+
+    # Create rotation matrix for neutral position
+    R=z_rot*y_rot*x_rot
+
+    # Axis rotation matricies for pointing down then rotate around y-axis, rotate around x-axis by 89.9, then y-axis by ori
+    x_rot = np.matrix([[ 1.0, 0.0, 0.0],
+                       [ 0.0, math.cos(angle_of_attack), -math.sin(angle_of_attack)],
+                       [ 0.0, math.sin(angle_of_attack), math.cos(angle_of_attack)]]) # x_rot[rows][columns]
+    y_rot = np.matrix([[ math.cos(orientation), 0.0, -math.sin(orientation)],
+                       [ 0.0, 1.0, 0.0],
+                       [ math.sin(orientation), 0.0, math.cos(orientation)]]) # y_rot[rows][columns]
+
+    # Cartesian rotation matrix of desired orientation
+    R=y_rot*x_rot*R
+
+    # Cartesian to axis-angle
+    theta = math.acos(((R[0, 0] + R[1, 1] + R[2, 2]) - 1.0)/2)
+    multi = 1 / (2 * math.sin(theta))
+    rx = multi * (R[2, 1] - R[1, 2]) * theta * 180/math.pi
+    ry = multi * (R[0, 2] - R[2, 0]) * theta * 180/math.pi
+    rz = multi * (R[1, 0] - R[0, 1]) * theta * 180/math.pi
+    print rx, ry, rz
+
+    # Rotate around tool centre point defined by tcp_2
+    socket_send(c,sCMD=101)
+
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=8)
+
+    socket_send(c,sCMD=102)
+
+    # Clean board
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0]+100,"y":current_Pose[1]-50,"z":50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+
+    demand_Pose["z"]=object_height+10
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+
+    demand_Pose["x"]=current_Pose[0]+250
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+
+    demand_Pose["x"]=current_Pose[0]+100
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+
+    demand_Pose["y"]=current_Pose[1]+50
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+
+    demand_Pose["x"]=current_Pose[0]+250
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+
+    demand_Pose["x"]=current_Pose[0]+100
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+
+    demand_Pose["z"]=50
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+    
+    # Return erasor
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+
+    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":object_height+2,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=8)
+
+    demand_Grip["act"]=30
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    demand_Grip["act"]=30
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    # Open grabber servo
+    demand_Grip["servo"]=80
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    time.sleep(0.2)
+
+    # Adjust actuator position
+    demand_Grip["act"]=80
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)
+
+

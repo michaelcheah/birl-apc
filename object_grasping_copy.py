@@ -7,8 +7,8 @@ import math
 import numpy as np
 import copy
 
-from interface_cmds import socket_send, ur_move, safe_ur_move, safe_ur_move_only, get_position, get_force, get_torque, interpolate_pose, ee_pinch
-from ur_waypoints import grab_home, grab_home_joints, end_effector_home, shelf_home_joints, shelf_joints_waypoint, shelf_joints, shelf_pos, cam1_joints, grabbing_joints_waypoint, grabbing_joints_waypoint2, shelf_grab_joints
+from interface_cmds_copy import *
+from ur_waypoints import *
 
 # Vacuumable object stowing strategy
 # Depends on: x, y of object on table and desired shelf to deposit object
@@ -17,55 +17,55 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
     # Home
     demand_Pose = copy.deepcopy(grab_home)
     demand_Grip = copy.deepcopy(end_effector_home)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
 
     # Rotate end effector
-    current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
+    current_Joints = get_ur_position(c,3)
     demand_Joints = {"x":current_Joints[0],"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4]+60,"rz":current_Joints[5]-45}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
 
     # Avoid camera mount
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":150,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Rotate base
-    current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
+    current_Joints = get_ur_position(c,3)
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
 
     # Move to above the object
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":x,"y":y,"z":100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Move down until oject is reached
     demand_Pose = {"x":x,"y":y,"z":25,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
-    object_height = 1000.0*float(safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.05, Grip=demand_Grip, CMD=5))
+    object_height = 1000.0*float(safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=0.05,Grip=demand_Grip,CMD=5))
     print "object_height: ", object_height
 
     # Turn on vacuum at current position
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     demand_Grip["vac"]="g"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     time.sleep(2)
     # Move to above object
     demand_Pose = {"x":x,"y":y,"z":100+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.25, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=0.25,Grip=demand_Grip,CMD=4)
 
     # Rotate base to shelves
-    current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
+    current_Joints = get_ur_position(c,3)
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
 
     # Move closer to shelves
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
     # Move to specific shelf
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),Grip=demand_Grip,CMD=2)
 
     # Set depth on shelf
     if object_height < 57:
@@ -76,32 +76,32 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
         print "Object too tall"
 
     # Raise end to object_height above the shelf
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Move to back of shelf
     demand_Pose = {"x":shelf_depth,"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Release vacuum at current position
     demand_Grip["vac"]="r"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     time.sleep(2)
 
     # Exit shelf
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),CMD=2)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
     print "object_height: ", object_height
     return "Shelf "+ str(shelf) + " completed"
 
@@ -148,75 +148,82 @@ def vac_pick(c,ser_ee,ser_vac,y,z,n):
     # Home
     demand_Pose = copy.deepcopy(grab_home)
     demand_Grip = copy.deepcopy(end_effector_home)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
 
     # Move to shelves
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
     # Move to shelf
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),Grip=demand_Grip,CMD=2)
 
     # Align with object
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     object_pos = copy.deepcopy(demand_Pose)
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Move above object
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":816.3,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=8)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8)
 
     # Move down until object is reached
     demand_Pose = {"x":816.3,"y":y,"z":z-50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
-    object_height = 1000.0*float(safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.05, Grip=demand_Grip, CMD=5))
+    object_height = 1000.0*float(safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=0.05,Grip=demand_Grip,CMD=5))
     print "object_height: ", object_height
 
     # Grab at current position
     demand_Grip["vac"]="g"
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
 
     time.sleep(2)
     # Lift object
     demand_Pose = {"x":816.3,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.25, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=0.25,Grip=demand_Grip,CMD=4)
 
     # Exit shelf
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=object_pos, Speed=0.75, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(object_pos),Speed=0.75,Grip=demand_Grip,CMD=4)
 
     # Move away from shelf
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
     # Rotate base
-    current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3) 
+    current_Joints = get_ur_position(c,3) 
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
 
     # Move to new position
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":-150*(4-n),"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Release object
     demand_Grip["vac"]="r"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     time.sleep(2)
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
 
     return "Completed pick from shelf "+ str(shelf)
 
 # Grabable object stowing strategy
 # Depends on: grasping co-ordiantes of object, and desired shelf to deposit object
-def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,size=70):
+def grab_stow(c,ser_ee,ser_vac,x,y,z=25,orientation=0,angle_of_attack=0,shelf=0,size=70):
     # Select tcp_2, for rotations around the grasping point
-    socket_send(c,sCMD=101)
+    socket_send(c,sCMD=103)
 
     object_size = 80-int(size)
+    if object_size < 10: object_size=10
+
+    demand_Grip = copy.deepcopy(end_effector_home)
+    demand_Grip["act"]=object_size-10
+    ser_ee.flush
+    print "Sending actuator move"
+    ser_ee.write("A" + chr(demand_Grip["act"]) + "\n")
 
     # Break-up rotations into max 90degrees
     thetaz = 0
@@ -250,9 +257,7 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
              [ 0.0, 0.0, 1.0]]) # z_rot[rows][columns]
 
     # Move to grabbing waypoint
-    demand_Grip = copy.deepcopy(end_effector_home)
-    demand_Grip["act"]=object_size-10
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grabbing_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(grabbing_joints_waypoint),CMD=2)
 
     # Create rotation matrix for current position
     R=z_rot*y_rot*x_rot
@@ -278,9 +283,9 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
         print rx, ry, rz
 
         # Rotate around tool centre point defined by tcp_2
-        current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+        current_Pose = get_ur_position(c,1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8)
+        msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=8)
 
         # Axis rotation matricies for grasping position, rotate around x-axis by aoa, then z-axis by ori
         z_rot = np.matrix([[ math.cos(orientation), -math.sin(orientation), 0.0],
@@ -299,9 +304,9 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
         print rx, ry, rz
 
         # Rotate around tool centre point defined by tcp_2
-        current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+        current_Pose = get_ur_position(c,1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8)
+        msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=8)
     else:
         # Axis rotation matricies for grasping position, rotate around x-axis by aoa, then z-axis by ori
         x_rot = np.matrix([[ 1.0, 0.0, 0.0],
@@ -323,14 +328,23 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
         print rx, ry, rz
 
         # Rotate around tool centre point defined by tcp_2
-        current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+        current_Pose = get_ur_position(c,1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8)
+        msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=8)
+
+    while True:
+        ipt = ser_ee.readline()
+        print ipt
+        if ipt == "done\r\n":
+            break
+    timeout = ser_ee.readline()
+    print "timeout: ", timeout
+    ser_ee.flush
 
     # Move to above object
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
-    demand_Pose = {"x":x,"y":y,"z":z+50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4,Speed=0.5)
+    current_Pose = get_ur_position(c,1)
+    demand_Pose = {"x":x,"y":y,"z":z+100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4,Speed=0.5)
 
     # Move closer
     #demand_Pose = {"x":x,"y":y,"z":z+50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -338,17 +352,17 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
 
     # Linear move to grasping position
     demand_Pose = {"x":x,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8,Speed=0.4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=8,Speed=0.4)
 
     # Grab with reduced chance of collision
     # Partially close grabber servo
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Grip = {"act": current_Grip[0]-300, "servo": 30, "tilt": current_Grip[2]&0x20, "vac": current_Grip[4]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Adjust actuator position
     demand_Grip["act"]=object_size
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Open grabber servo
     #demand_Grip["servo"]=80
@@ -356,30 +370,32 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
 
     # Close grabber servo
     demand_Grip["servo"]=0
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     time.sleep(0.5)
     # Lift object
-    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":200,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":z+100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=4)
+
+    socket_send(c,sCMD=101)
 
     # Move safely towards shelf
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grabbing_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(grabbing_joints_waypoint),CMD=2)
 
     # Move safely towards shelf
-    current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
+    current_Joints = get_ur_position(c,3)
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Joints), CMD=2)
 
     # Move safely towards shelf
     demand_Joints = copy.deepcopy(shelf_joints_waypoint)
     demand_Joints["rz"] = demand_Joints["rz"]-90
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Joints),CMD=2)
 
     # Move safely towards shelf
     demand_Joints = copy.deepcopy(shelf_joints[shelf])
     demand_Joints["rz"] = demand_Joints["rz"]-90
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Joints),CMD=2)
 
     # Define position on shelf
     object_height = 50
@@ -387,31 +403,31 @@ def grab_stow(c,ser_ee,ser_vac,x,y,z=30,orientation=0,angle_of_attack=0,shelf=0,
     yoff = 35
     
     # Align object with shelf
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=4)
 
     # Move into shelf
     demand_Pose["x"]=shelf_depth
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=4)
 
     # Release object
     demand_Grip["servo"]=80
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     time.sleep(1)
     # Move back
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(demand_Pose),CMD=4)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(shelf_joints[shelf]),CMD=2)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
 
     # Return home
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(grab_home_joints),CMD=2)
 
     # Reset tool to tcp_1
     socket_send(c,sCMD=100)
@@ -458,38 +474,6 @@ def grab_pick(c,ser_ee,ser_vac,y,z=12,orientation=0,object_height=30,size=70):
     print "y: ", y
     print "z: ", z
 
-    '''
-    demand_Pose = copy.deepcopy(grab_home)
-    demand_Grip = copy.deepcopy(end_effector_home)
-    demand_Grip["act"]=size
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
-
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
-
-    demand_Joints = copy.deepcopy(shelf_joints[shelf])
-    demand_Joints["rz"] = demand_Joints["rz"]+orientation
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
-
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
-    demand_Pose = {"x":800,"y":y,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.5,CMD=4)
-
-    demand_Grip["servo"]=0
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.5,CMD=4)
-
-    time.sleep(0.5)
-    demand_Pose["z"]=demand_Pose["z"]+10
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.5,CMD=4)
-
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Joints),Grip=demand_Grip,CMD=2)
-
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
-
-    demand_Grip["servo"]=80
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),Grip=demand_Grip,CMD=2)
-
-    #socket_send(c,sCMD=100)
-    '''
     demand_Grip = copy.deepcopy(end_effector_home)
     demand_Grip["act"] = int(80-0.8*object_height)
     ser_ee.flush
@@ -497,7 +481,7 @@ def grab_pick(c,ser_ee,ser_vac,y,z=12,orientation=0,object_height=30,size=70):
     ser_ee.write("A" + chr(demand_Grip["act"]) + "\n")
 
     #demand_Grip["servo"] = 0
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_grab_joints[shelf]),CMD=2)
+    msg = safe_ur_move(c,Pose=copy.deepcopy(shelf_grab_joints[shelf]),CMD=2)
 
     while True:
         ipt = ser_ee.readline()
@@ -508,26 +492,26 @@ def grab_pick(c,ser_ee,ser_vac,y,z=12,orientation=0,object_height=30,size=70):
     print "timeout: ", timeout
     ser_ee.flush
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose = get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height-37,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
 
     yoffset=20.0*(y+73.0)/480.0
     demand_Pose["x"]=current_Pose[0]+160.0-yoffset
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
     demand_Pose["z"]=current_Pose[2]+object_height-52
     #demand_Grip["servo"]=60
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
 
     demand_Pose["x"]=current_Pose[0]+90-yoffset
     demand_Grip["servo"]=0
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
     demand_Pose["x"]=current_Pose[0]-30-yoffset
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
     return "Completed pick from shelf "+ str(shelf)
 
@@ -539,75 +523,79 @@ def combined_pick(c,ser_ee,ser_vac,x,y,z=12,orientation=0,angle_of_attack=0,shel
 
     return "Completed pick from shelf "+ str(shelf)
 
+'''
 def banana(c,ser_ee,ser_vac,x,y,rz):
     # banana picking strategy
     demand_Pose = copy.deepcopy(grab_home)
     demand_Grip = copy.deepcopy(end_effector_home)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
     demand_Grip["act"]=40
     current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
     demand_Joints = {"x":current_Joints[0],"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]+rz}
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
     time.sleep(1)
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
     demand_Pose["y"]=y
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
     demand_Pose["z"]=8
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
     demand_Grip["servo"]=0
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
     time.sleep(0.5)
     demand_Grip["vac"]="g"
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
     time.sleep(2)
     demand_Pose["z"]=100
-    ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
-    ur_move(c,ser_ee,ser_vac)
+    safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip)
+    safe_move(c,ser_ee,ser_vac)
     demand_Grip["servo"]=80
     demand_Grip["vac"]="r"
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
     return
+'''
 
+'''
 def fork(c, ser_ee, ser_vac,x,y,rz):
     # fork picking strategy
     demand_Pose = copy.deepcopy(grab_home)
     demand_Grip = copy.deepcopy(end_effector_home)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
 
     current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4]+60,"rz":current_Joints[5]-45}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":y,"z":100+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
 
     demand_Pose = {"x":x,"y":y,"z":25+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.05, Grip=demand_Grip, CMD=5)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.05, Grip=demand_Grip, CMD=5)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     demand_Grip["vac"]="g"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
 
     time.sleep(2)
     demand_Pose = {"x":x,"y":y,"z":100+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.25, Grip=demand_Grip, CMD=4)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.25, Grip=demand_Grip, CMD=4)
 
     current_Joints, current_Grip = get_position(c,ser_ee,ser_vac,CMD=3)
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
 
     demand_Grip["vac"]="r"
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+    msg = safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
 
     time.sleep(4)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
 
     return
+'''
 
 def get_grasping_coords(p_centre,p_edge,height):
     if height>80:

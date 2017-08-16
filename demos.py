@@ -8,8 +8,8 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds import socket_send, ur_move, safe_ur_move, safe_ur_move_only, get_position, get_force, get_torque
-from object_grasping import vac_stow, vac_pick, grab_stow, grab_pick, combined_pick, combined_stow, banana, fork
+from interface_cmds_copy import *
+from object_grasping_copy import *
 from ur_waypoints import *
 from vision_copy import *
 
@@ -62,16 +62,16 @@ def smooth_rotate(c,ser_ee,ser_vac,orientation=0,angle_of_attack=0):
 
 def throwing_demo(c,ser_ee,ser_vac):
     demand_Grip = copy.deepcopy(end_effector_home)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
     inp = raw_input("Continue?")
     time.sleep(3)
     demand_Grip["act"]=75
-    demand_Grip["servo"]=127
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    demand_Grip["servo"]=0
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
     time.sleep(3)
-    demand_Grip["servo"]=22
+    demand_Grip["servo"]=80
     try:
         # Send formatted CMD
         c.send("("+str(throwing_demo_joints2["x"])+","+str(throwing_demo_joints2["y"])+","+str(throwing_demo_joints2["z"])+","+str(throwing_demo_joints2["rx"])+","+str(throwing_demo_joints2["ry"])+","+str(throwing_demo_joints2["rz"])+","+str(9)+","+str(0)+")");
@@ -97,9 +97,10 @@ def throwing_demo(c,ser_ee,ser_vac):
     except socket.error as socketerror:
         print ".......................Some kind of error :(......................."
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
 def cal_test(p):
-    p1, inverse = pix3world_cal([225.0,649.0],[741.0,1209.0],[264.0,1237.0])
+    #p1, inverse = pix3world_cal([225.0,649.0],[741.0,1209.0],[264.0,1237.0])
+    p1, inverse = pix3world_cal([0.0,0.0],[183.0,191.0],[17.0,204.0])
     x, y = pix3world(p1, inverse, p)
     return x, y

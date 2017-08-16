@@ -60,9 +60,12 @@ GLASS_PARAM2 = {'thresh': [20,30,5],
                'radius': [10,40]}
 
 # Calibration coordinates
-C1 = [-200,-572.4]
-C2 = [-602,-79.4]
-C3 = [-200,-79.4]
+CAL_XOFF = 1.0
+CAL_YOFF = -16.0
+
+C1 = [-200.0+CAL_XOFF,-604.0+CAL_YOFF]
+C2 = [-602.0+CAL_XOFF,-111.0+CAL_YOFF]
+C3 = [-200.0+CAL_XOFF,-111.0+CAL_YOFF]
 
 DELTA_X = C3[0]-C2[0]
 DELTA_Y = C3[1]-C1[1]
