@@ -31,153 +31,75 @@ def socket_send(c, sPose=copy.deepcopy(grab_home), sSpeed = 0.75, sCMD = 0):
     try:
         # Send formatted CMD
         c.send("("+str(sendPose["x"])+","+str(sendPose["y"])+","+str(sendPose["z"])+","+str(sendPose["rx"])+","+str(sendPose["ry"])+","+str(sendPose["rz"])+","+str(sCMD)+","+str(sSpeed)+")");
-        print "Sent ur move"
+        #print "Sent ur move"
         # Wait for reply
         msg=c.recv(1024)
-        print msg
-        print ""
+        #print msg
+        #print ""
     except socket.error as socketerror:
         print ".......................Some kind of error :(......................."
     # Return reply
     return msg
 
-# Move CMDs
-# Send socket and serial CMDs
-# Returns nothing
-# Now redundant to safe_ur_move
-def ur_move(c, ser_ee, ser_vac,Pose = copy.deepcopy(grab_home),Speed = 0.75,Grip = copy.deepcopy(end_effector_home),CMD = 0):
-    # Socket CMDs
-    sendPose = copy.deepcopy(Pose)
-    msg = socket_send(c, sPose=sendPose, sSpeed=Speed, sCMD=CMD)
-
+def serial_send(ser_ee,ser_vac,id,var):
     # Serial CMDs
-    ser_ee.flush
-    ser_vac.flush
-    print "Sending end effector move"
-    # Set Actuator position, min = 0, max = 80
-    ser_ee.write("A" + chr(Grip["act"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set Grabber Servo position, min = 22, max = 127
-    ser_ee.write("G" + chr(Grip["servo"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set Tilt Servo position, min = 0, max = 1
-    ser_ee.write("T" + chr(Grip["tilt"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set vacuum state, release = "r", grab = "g"
-    ser_vac.write("V" + Grip["vac"] + "\n")
-    # Wait for vacuum arduino to finish
-    while True:
-        ipt = ser_vac.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
+    if id == "V":
+        #print "Sending vacuum move"
+        ser_vac.flush
+        # Set vacuum state, release = "r", grab = "g"
+        ser_vac.write(id + var + "\n")
+        # Wait for vacuum arduino to finish
+        while True:
+            ipt = ser_vac.readline()
+            #print ipt
+            if ipt == "done\r\n":
+                break
+    else:
+        #print "Sending end effector move"
+        ser_ee.flush
+        # Set Actuator position, min = 0, max = 80
+        ser_ee.write(id + chr(var) + "\n")
+        # Wait for end effector arduino to finish
+        while True:
+            ipt = ser_ee.readline()
+            #print ipt
+            if ipt == "done\r\n":
+                break
+    return
 
 # Safe Move CMDs
 # Send socket and serial CMDs
 # Returns reply from UR
-def safe_ur_move(c,ser_ee,ser_vac,Pose = copy.deepcopy(grab_home),Speed = 0.75,Grip = copy.deepcopy(end_effector_home),CMD = 4):
+def safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home),Speed=0.75,Grip=copy.deepcopy(end_effector_home),CMD=4):
     # Socket CMDs
-    sendPose = copy.deepcopy(Pose)
-    if CMD == 4:
-        # Safe move
-        demand_Pose = copy.deepcopy(sendPose)
-        print "demand_Pose: ", demand_Pose
-        msg = "no_safe_move_found"
-        n = 1           # Number of steps to divide the remaining move into
-        alpha = 1.0     # Interpolation factor
-        # Subsample pose until steps are small enough
-        # e.g. demand_Pose rejected -> move split into 2 steps -> first step accepted -> second step accepted -> returns "completed_safe_move"
-        #                                                                             -> second step rejected -> remaining n steps split into n+1 steps etc...
-        #                                                      -> first step rejected -> move split into 3 steps etc...
-        while msg == "no_safe_move_found":
-            current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
-            print "current_pose: ", current_Pose
-            Pose2 = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-            alpha = 1.0/n
-            for i in range(1,n+1):
-                print n
-                # Interpolate from current position to demand position in n steps
-                i_Pose = interpolate_pose(demand_Pose, Pose2, alpha*i)
-                print i_Pose
-                # Send new demand_Pose
-                msg = socket_send(c, sPose=i_Pose, sSpeed=Speed, sCMD=4)
-                # If rejected, increment number of steps and restart for loop
-                if msg == "no_safe_move_found":
-                    n = n+1
-                    time.sleep(0.5)
-                    break
-                # If accepted, decrement number of steps and continue for loop
-                else:
-                    n = n-1
-    else:
-        # Non-safe move
-        msg = socket_send(c, sPose=sendPose, sSpeed=Speed, sCMD=CMD)
+    print "Sending ur move"
+    msg = safe_ur_move(c,copy.deepcopy(Pose),CMD,Speed=Speed)
 
     # Serial CMDs
-    ser_ee.flush
-    ser_vac.flush
     print "Sending end effector move"
-    # Set Actuator position, min = 0, max = 80
-    ser_ee.write("A" + chr(Grip["act"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set Grabber Servo position, min = 22, max = 127
-    ser_ee.write("G" + chr(Grip["servo"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set Tilt Servo position, min = 0, max = 1
-    ser_ee.write("T" + chr(Grip["tilt"]) + "\n")
-    # Wait for end effector arduino to finish
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    ser_ee.flush
-    # Set vacuum state, release = "r", grab = "g"
-    ser_vac.write("V" + Grip["vac"] + "\n")
-    # Wait for vacuum arduino to finish
-    while True:
-        ipt = ser_vac.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-
+    end_effector_move(ser_ee,ser_vac,copy.deepcopy(Grip))
     return msg
 
-# Test function for moving UR while waiting for Serial
+#
+#
+#
+def end_effector_move(ser_ee,ser_vac,Grip):
+    # Serial CMDs
+    serial_send(ser_ee,ser_vac,"A",Grip["act"])
+    ipt = ser_ee.readline()
+    print "Timeout = ",ipt
+
+    serial_send(ser_ee,ser_vac,"G",Grip["servo"])
+
+    serial_send(ser_ee,ser_vac,"T",Grip["tilt"])
+
+    serial_send(ser_ee,ser_vac,"V",Grip["vac"])   
+    return
+
 # Safe Move CMDs
 # Send socket CMDs without Serial CMDs
 # Returns reply from UR
-def safe_ur_move_only(c,ser_ee,ser_vac,Pose = copy.deepcopy(grab_home),Speed = 0.75,CMD = 4):
+def safe_ur_move(c,Pose,CMD,Speed=0.75):
     # Socket CMDs
     sendPose = copy.deepcopy(Pose)
     if CMD == 4:
@@ -192,17 +114,17 @@ def safe_ur_move_only(c,ser_ee,ser_vac,Pose = copy.deepcopy(grab_home),Speed = 0
         #                                                                             -> second step rejected -> remaining n steps split into n+1 steps etc...
         #                                                      -> first step rejected -> move split into 3 steps etc...
         while msg == "no_safe_move_found":
-            current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
-            print "current_pose: ", current_Pose
+            current_Pose = get_ur_position(c,CMD=1)
+            #print "current_pose: ", current_Pose
             Pose2 = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
             alpha = 1.0/n
             for i in range(1,n+1):
-                print n
+                #print n
                 # Interpolate from current position to demand position in n steps
-                i_Pose = interpolate_pose(demand_Pose, Pose2, alpha*i)
-                print i_Pose
+                i_Pose = interpolate_pose(demand_Pose,Pose2,alpha*i)
+                #print i_Pose
                 # Send new demand_Pose
-                msg = socket_send(c, sPose=i_Pose, sSpeed=0.75, sCMD=4)
+                msg = socket_send(c,sPose=i_Pose,sSpeed=0.75,sCMD=4)
                 # If rejected, increment number of steps and restart for loop
                 if msg == "no_safe_move_found":
                     n = n+1
@@ -213,47 +135,32 @@ def safe_ur_move_only(c,ser_ee,ser_vac,Pose = copy.deepcopy(grab_home),Speed = 0
                     n = n-1
     else:
         # Non-safe move
-        msg = socket_send(c, sPose=sendPose, sSpeed=Speed, sCMD=CMD)
+        msg = socket_send(c,sPose=sendPose,sSpeed=Speed,sCMD=CMD)
 
     return msg
 
 # Query CMDs
 # Send socket and serial CMDs
 # Returns decoded replies: [current robot position], [actuator angle, servo pos, tilt pos, switch state, vac state]
-def get_position(c, ser_ee, ser_vac,Pose = copy.deepcopy(grab_home),CMD = 1):
-    # Initialize variables
-    sendPose = copy.deepcopy(Pose)
-    msg = "0"
-    ipt1a = "0"
-    ipt1b = "0"
-    ipt1c = "0"
-    ipt2 = "0"
-
+def get_position(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home),Speed=0.75,CMD=1):
     # Socket CMDs
-    msg = socket_send(c, sPose=sendPose, sSpeed=0, sCMD=CMD)
+    current_position = get_ur_position(c,CMD,copy.deepcopy(Pose),Speed)
 
     # Serial CMDs
-    # Query end effector arduino state
-    ser_ee.write("R" + "0" + "\n")
+    current_grip = get_ee_position(ser_ee,ser_vac)
 
-    ipt1a = ser_ee.readline()
-    ipt1b = ser_ee.readline()
-    ipt1c = ser_ee.readline()
-    ipt1d = ser_ee.readline()
-    print ipt1a
-    print ""
-    print ipt1b
-    print ""
-    print ipt1c
-    print ""
-    print ipt1d
-    print ""
+    return current_position, current_grip 
 
-    # Query vacuum arduino state
-    ser_vac.write("R" + "0" + "\n")
-    ipt2 = ser_vac.readline()
-    print ipt2
-    print ""
+#
+#
+#
+def get_ur_position(c,CMD,gPose=copy.deepcopy(grab_home),gSpeed=0.75):
+    # Initialize variables
+    sendPose = copy.deepcopy(gPose)
+    msg = "0"
+
+    # Socket CMDs
+    msg = socket_send(c, sPose=gPose, sSpeed=gSpeed, sCMD=CMD)
 
     # Decode Pose or Joints from UR
     current_position = [0,0,0,0,0,0]
@@ -267,8 +174,8 @@ def get_position(c, ser_ee, ser_vac,Pose = copy.deepcopy(grab_home),CMD = 1):
             current_position[n] = float(msg[data_start:data_end])
             if msg[x]=="e":
                 current_position[n] = current_position[n]*math.pow(10,float(msg[x+1:x+4]))
-                print "e", msg[x+1:x+4]
-                print "e", int(msg[x+1:x+4])
+                #print "e", msg[x+1:x+4]
+                #print "e", int(msg[x+1:x+4])
                 if n < 5:
                     x = x+5
                     data_start = x
@@ -284,14 +191,44 @@ def get_position(c, ser_ee, ser_vac,Pose = copy.deepcopy(grab_home),CMD = 1):
         if CMD==1 or CMD==8: current_position[x] = current_position[x]*1000.0
         if CMD==3: current_position[x] = current_position[x]*180.0/math.pi
         current_position[x+3] = current_position[x+3]*180.0/math.pi
-    
+
+    return current_position
+
+#
+#
+#
+def get_ee_position(ser_ee,ser_vac):
+    # Initialize variables
+    ipt1a = "0"
+    ipt1b = "0"
+    ipt1c = "0"
+    ipt2 = "0"
+
+    # Serial CMDs
+    # Query end effector arduino state
+    ser_ee.write("R" + "0" + "\n")
+
+    ipt1a = ser_ee.readline()
+    ipt1b = ser_ee.readline()
+    ipt1c = ser_ee.readline()
+    ipt1d = ser_ee.readline()
+    #print ipt1a
+    #print ipt1b
+    #print ipt1c
+    #print ipt1d
+
+    # Query vacuum arduino state
+    ser_vac.write("R" + "0" + "\n")
+    ipt2 = ser_vac.readline()
+    #print ipt2
+
     # Decode Serial Data
     ipt1a = ipt1a[0:len(ipt1a)-2]
     ipt1b = ipt1b[0:len(ipt1b)-2]
     ipt1c = ipt1c[0:len(ipt1c)-2]
     ipt1d = ipt1d[0:len(ipt1d)-2]
 
-    return current_position, [int(ipt1a)+300, int(ipt1b), int(ipt1c), int(ipt1d), ipt2[0]] 
+    return [int(ipt1a)+300, int(ipt1b), int(ipt1c), int(ipt1d), ipt2[0]] 
 
 
 # Query CMDs
@@ -299,7 +236,7 @@ def get_position(c, ser_ee, ser_vac,Pose = copy.deepcopy(grab_home),CMD = 1):
 # Unused as force now sent as a vector and decoded by get_position()
 def get_force(c):
     msg = socket_send(c, sPose=copy.deepcopy(grab_home), sCMD=6)
-    print "force: ", msg
+    #print "force: ", msg
     return msg
 
 # Query CMDs
@@ -307,7 +244,7 @@ def get_force(c):
 # Unused as torque now sent as a vector and decoded by get_position()
 def get_torque(c):
     msg = socket_send(c, sPose=copy.deepcopy(grab_home), sCMD=7)
-    print "torque: ", msg
+    #print "torque: ", msg
     return msg
 
 # Finds new pose linearly interpotlated from Pose2 to Pose1

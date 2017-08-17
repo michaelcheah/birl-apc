@@ -8,8 +8,8 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds_copy import *
-from object_grasping_copy import *
+from interface_cmds import *
+from object_grasping import *
 from ur_waypoints import *
 from vision_copy import *
 

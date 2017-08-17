@@ -16,8 +16,8 @@ import cv2
 from matplotlib import pyplot as plt
 import imutils
 
-from interface_cmds_copy import *
-from object_grasping_copy import *
+from interface_cmds import *
+from object_grasping import *
 from ur_waypoints import *
 from demos import *
 from vision_copy import *

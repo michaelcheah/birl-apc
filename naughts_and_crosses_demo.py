@@ -8,8 +8,8 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds_copy import *
-from object_grasping_copy import *
+from interface_cmds import *
+from object_grasping import *
 from ur_waypoints import *
 from vision_copy import *
 
@@ -298,10 +298,8 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
         z_rot = np.matrix([[ math.cos(math.pi/2), -math.sin(math.pi/2), 0.0],
                  [ math.sin(math.pi/2), math.cos(math.pi/2), 0.0],
                  [ 0.0, 0.0, 1.0]]) # z_rot[rows][columns]
-
         # Cartesian rotation matrix of desired orientation
         R=z_rot*R
-
         # Cartesian to axis-angle
         theta = math.acos(((R[0, 0] + R[1, 1] + R[2, 2]) - 1.0)/2)
         multi = 1 / (2 * math.sin(theta))
@@ -310,7 +308,6 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
         rz = multi * (R[1, 0] - R[0, 1]) * theta * 180/math.pi
         #print rx, ry, rz
         #inp = raw_input("Continue?")
-
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
         msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=8)
@@ -580,5 +577,3 @@ def clean_board(c,ser_ee,ser_vac):
     # Adjust actuator position
     demand_Grip["act"]=80
     msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)
-
-
