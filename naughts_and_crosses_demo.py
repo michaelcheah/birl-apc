@@ -14,7 +14,7 @@ from ur_waypoints import *
 from vision_copy import *
 
 def naughts_crosses(c,ser_ee,ser_vac,start=0):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
     z_height = z_cal(c,ser_ee,ser_vac)
 
@@ -32,14 +32,14 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
     if start==0:
         #draw
         #set grid_state
-        grid_state, sq = nc_pick_move(copy.deepcopy(grid_state)) 
+        grid_state, sq = nc_pick_move(dict(grid_state)) 
         nc_robot_move(c,ser_ee,ser_vac,sq,z_height)
         print "completed move"
         print grid_state[0:3]
         print grid_state[3:6]
         print grid_state[6:9]
 
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
 
     grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
@@ -54,12 +54,12 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
     while min(grid_state) == 0:
         # Wait for player move
         print "waiting for player move"
-        grid_state = get_nc_state(empty_grid,grid_ref,top_left,bottom_right,copy.deepcopy(grid_state))
+        grid_state = get_nc_state(empty_grid,grid_ref,top_left,bottom_right,dict(grid_state))
         print grid_state[0:3]
         print grid_state[3:6]
         print grid_state[6:9]
         # Check game state
-        win = nc_finish(copy.deepcopy(grid_state))
+        win = nc_finish(dict(grid_state))
         if win==1:
             return "................Robot Victory!................"
         if win==2: 
@@ -69,17 +69,17 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
 
         #draw
         #set grid_state
-        grid_state, sq = nc_pick_move(copy.deepcopy(grid_state)) 
+        grid_state, sq = nc_pick_move(dict(grid_state)) 
         nc_robot_move(c,ser_ee,ser_vac,sq,z_height)
         print "completed move"
         print grid_state[0:3]
         print grid_state[3:6]
         print grid_state[6:9]
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
         grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
         # Check game state
-        win = nc_finish(copy.deepcopy(grid_state))
+        win = nc_finish(dict(grid_state))
         if win==1:
             return "Robot Victory!"
         if win==2: 
@@ -95,7 +95,7 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
     return ".....................Draw....................."
 
 def get_nc_state(empty_grid,ref_image,top_left,bottom_right, grid):
-    grid_state = copy.deepcopy(grid)
+    grid_state = dict(grid)
     change = 0
     n = 0
     new_grid = [0,0,0,
@@ -112,7 +112,7 @@ def get_nc_state(empty_grid,ref_image,top_left,bottom_right, grid):
     time.sleep(1)
     while True:
         change = 0
-        new_grid=copy.deepcopy(grid_state)
+        new_grid=dict(grid_state)
         for i in range(0,9):        
             if grid1[i]==2 and grid2[i]==2 and grid3[i]==2 and grid_state[i]==0:
                 new_grid[i] = 2
@@ -226,7 +226,7 @@ def cal_grid_im(name):
     return grid_im, top_left, bottom_right
 
 def read_grid(empty_grid_im,grid_image,grid):
-    grid_state = copy.deepcopy(grid)
+    grid_state = dict(grid)
     for i in range(0,9):
         print "square: ",i
         #print "new mean: ",np.mean(grid_image[i])
@@ -245,7 +245,7 @@ def z_cal(c,ser_ee,ser_vac):
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     object_height = 1000.0*float(safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
     
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
     return object_height+6
 
@@ -284,11 +284,11 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
     #inp = raw_input("Continue?")
 
     # Move to drawing waypoint
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
 
     # Axis rotation matricies for grasping position, rotate around x-axis by aoa, then z-axis by ori
     #x_rot = np.matrix([[ 1.0, 0.0, 0.0],
@@ -310,7 +310,7 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
         #inp = raw_input("Continue?")
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=8)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
     '''
     for i in range(0,4):
         z_rot = np.matrix([[ math.cos(-math.pi/2), -math.sin(-math.pi/2), 0.0],
@@ -331,13 +331,13 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
 
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Speed=1.5,CMD=8)
+        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
 
     msg = socket_send(c,sCMD=100)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
 def nc_pick_move(grid_state):
-    new_grid = copy.deepcopy(grid_state)
+    new_grid = dict(grid_state)
     remaining_sqs = []
     win=10
     nlose = 10
@@ -384,7 +384,7 @@ def nc_pick_move(grid_state):
     return new_grid, sq
 
 def nc_finish(grid_state):
-    grid=copy.deepcopy(grid_state)
+    grid=dict(grid_state)
     win = 0
     for i in range(0,3):
         # Columns
@@ -404,9 +404,9 @@ def nc_finish(grid_state):
     return win
 
 def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(tally_home_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
     dx=0
     dz=0
     board_offset=-160
@@ -423,25 +423,25 @@ def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
         board_offset=-30
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0]+board_offset+15*dx,"y":current_Pose[1],"z":current_Pose[2]-60*dz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=4)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
     demand_Pose["y"]=current_Pose[1]+20
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=4)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
     if dx==0:
         demand_Pose["x"]=current_Pose[0]+board_offset+15*5
     demand_Pose["z"]=current_Pose[2]-60*dz-40
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=8)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
 
     demand_Pose["y"]=current_Pose[1]
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=4)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(tally_home_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
 def clean_board(c,ser_ee,ser_vac):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -454,30 +454,30 @@ def clean_board(c,ser_ee,ser_vac):
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     demand_Grip = {"act": 30, "servo": 80, "tilt": 0, "vac": 'r'}
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     demand_Grip["servo"]=0
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     
     # Adjust actuator position
     demand_Grip["act"]=40
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     '''
     # Open grabber servo
     demand_Grip["servo"]=80
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     
     # Close grabber servo
     demand_Grip["servo"]=0
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     time.sleep(0.2)
     '''
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":40,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Grip["act"]=40
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Rotate around y axis by orientation
     # Convert to radians
@@ -523,38 +523,38 @@ def clean_board(c,ser_ee,ser_vac):
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),CMD=8)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
 
     socket_send(c,sCMD=102)
 
     # Clean board
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0]+100,"y":current_Pose[1]-50,"z":50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Pose["z"]=object_height+10
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Pose["x"]=current_Pose[0]+250
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+100
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["y"]=current_Pose[1]+50
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+250
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+100
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=8)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["z"]=50
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=copy.deepcopy(demand_Pose), CMD=4)
+    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
     
     # Return erasor
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),CMD=2)
+    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
 
     current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -564,16 +564,16 @@ def clean_board(c,ser_ee,ser_vac):
     msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=8)
 
     demand_Grip["act"]=30
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     demand_Grip["act"]=30
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Open grabber servo
     demand_Grip["servo"]=80
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     time.sleep(0.2)
 
     # Adjust actuator position
     demand_Grip["act"]=80
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)

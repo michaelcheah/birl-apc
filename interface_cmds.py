@@ -25,8 +25,8 @@ from ur_waypoints import grab_home, grab_home_joints, end_effector_home, shelf_h
 #
 # 100 - set tool centre point to tcp_1 (only z offset from end), Variable = n.a., UR returns string "tool_1_selected"
 # 101 - set tool centre point to tcp_2 (centre used for vector rotations), Variable = n.a., UR returns string "tool_2_selected"
-def socket_send(c, sPose=copy.deepcopy(grab_home), sSpeed = 0.75, sCMD = 0):
-    sendPose = copy.deepcopy(sPose)
+def socket_send(c, sPose=dict(grab_home), sSpeed = 0.75, sCMD = 0):
+    sendPose = dict(sPose)
     msg = "Failed"
     try:
         # Send formatted CMD
@@ -70,14 +70,14 @@ def serial_send(ser_ee,ser_vac,id,var):
 # Safe Move CMDs
 # Send socket and serial CMDs
 # Returns reply from UR
-def safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home),Speed=0.75,Grip=copy.deepcopy(end_effector_home),CMD=4):
+def safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home),Speed=0.75,Grip=dict(end_effector_home),CMD=4):
     # Socket CMDs
     print "Sending ur move"
-    msg = safe_ur_move(c,copy.deepcopy(Pose),CMD,Speed=Speed)
+    msg = safe_ur_move(c,dict(Pose),CMD,Speed=Speed)
 
     # Serial CMDs
     print "Sending end effector move"
-    end_effector_move(ser_ee,ser_vac,copy.deepcopy(Grip))
+    end_effector_move(ser_ee,ser_vac,dict(Grip))
     return msg
 
 #
@@ -87,7 +87,9 @@ def end_effector_move(ser_ee,ser_vac,Grip):
     # Serial CMDs
     serial_send(ser_ee,ser_vac,"A",Grip["act"])
     ipt = ser_ee.readline()
-    print "Timeout = ",ipt
+    #print "sw state = ",ipt
+    ipt = ser_ee.readline()
+    #print "Timeout = ",ipt
 
     serial_send(ser_ee,ser_vac,"G",Grip["servo"])
 
@@ -101,10 +103,10 @@ def end_effector_move(ser_ee,ser_vac,Grip):
 # Returns reply from UR
 def safe_ur_move(c,Pose,CMD,Speed=0.75):
     # Socket CMDs
-    sendPose = copy.deepcopy(Pose)
+    sendPose = dict(Pose)
     if CMD == 4:
         # Safe move
-        demand_Pose = copy.deepcopy(sendPose)
+        demand_Pose = dict(sendPose)
         #print "demand_Pose: ", demand_Pose
         msg = "no_safe_move_found"
         n = 1           # Number of steps to divide the remaining move into
@@ -142,9 +144,9 @@ def safe_ur_move(c,Pose,CMD,Speed=0.75):
 # Query CMDs
 # Send socket and serial CMDs
 # Returns decoded replies: [current robot position], [actuator angle, servo pos, tilt pos, switch state, vac state]
-def get_position(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home),Speed=0.75,CMD=1):
+def get_position(c,ser_ee,ser_vac,Pose=dict(grab_home),Speed=0.75,CMD=1):
     # Socket CMDs
-    current_position = get_ur_position(c,CMD,copy.deepcopy(Pose),Speed)
+    current_position = get_ur_position(c,CMD,dict(Pose),Speed)
 
     # Serial CMDs
     current_grip = get_ee_position(ser_ee,ser_vac)
@@ -154,13 +156,14 @@ def get_position(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home),Speed=0.75,CMD=1
 #
 #
 #
-def get_ur_position(c,CMD,gPose=copy.deepcopy(grab_home),gSpeed=0.75):
+def get_ur_position(c,CMD,gPose=dict(grab_home),gSpeed=0.75):
     # Initialize variables
-    sendPose = copy.deepcopy(gPose)
+    sendPose = dict(gPose)
     msg = "0"
 
     # Socket CMDs
-    msg = socket_send(c, sPose=gPose, sSpeed=gSpeed, sCMD=CMD)
+    msg = socket_send(c, sPose=sendPose, sSpeed=gSpeed, sCMD=CMD)
+    print "recieved: ",msg
 
     # Decode Pose or Joints from UR
     current_position = [0,0,0,0,0,0]
@@ -170,7 +173,7 @@ def get_ur_position(c,CMD,gPose=copy.deepcopy(grab_home),gSpeed=0.75):
     x = 0
     while x < len(msg):
         if msg[x]=="," or msg[x]=="]" or msg[x]=="e":
-            data_end = x-1
+            data_end = x
             current_position[n] = float(msg[data_start:data_end])
             if msg[x]=="e":
                 current_position[n] = current_position[n]*math.pow(10,float(msg[x+1:x+4]))
@@ -192,6 +195,7 @@ def get_ur_position(c,CMD,gPose=copy.deepcopy(grab_home),gSpeed=0.75):
         if CMD==3: current_position[x] = current_position[x]*180.0/math.pi
         current_position[x+3] = current_position[x+3]*180.0/math.pi
 
+    print "decoded msg: ",current_position
     return current_position
 
 #
@@ -235,7 +239,7 @@ def get_ee_position(ser_ee,ser_vac):
 # Send socket CMD=6
 # Unused as force now sent as a vector and decoded by get_position()
 def get_force(c):
-    msg = socket_send(c, sPose=copy.deepcopy(grab_home), sCMD=6)
+    msg = socket_send(c, sPose=dict(grab_home), sCMD=6)
     #print "force: ", msg
     return msg
 
@@ -243,20 +247,22 @@ def get_force(c):
 # Send socket CMD=7
 # Unused as torque now sent as a vector and decoded by get_position()
 def get_torque(c):
-    msg = socket_send(c, sPose=copy.deepcopy(grab_home), sCMD=7)
+    msg = socket_send(c, sPose=dict(grab_home), sCMD=7)
     #print "torque: ", msg
     return msg
 
 # Finds new pose linearly interpotlated from Pose2 to Pose1
 # Returns new pose
 def interpolate_pose(Pose1, Pose2, alpha):
-    i_Pose = copy.deepcopy(grab_home)
-    i_Pose["x"] = alpha*Pose1["x"] + (1.0-alpha)*Pose2["x"]
-    i_Pose["y"] = alpha*Pose1["y"] + (1.0-alpha)*Pose2["y"]
-    i_Pose["z"] = alpha*Pose1["z"] + (1.0-alpha)*Pose2["z"]
-    i_Pose["rx"] = alpha*Pose1["rx"] + (1.0-alpha)*Pose2["rx"]
-    i_Pose["ry"] = alpha*Pose1["ry"] + (1.0-alpha)*Pose2["ry"]
-    i_Pose["rz"] = alpha*Pose1["rz"] + (1.0-alpha)*Pose2["rz"]
+    i_Pose = {"x": 0.0, "y": 0.0, "z": 0.0, "rx": 0.0, "ry": 0.0, "rz": 0.0}
+    i_Pose1 = dict(Pose1)
+    i_Pose2 = dict(Pose2)
+    i_Pose["x"] = alpha*i_Pose1["x"] + (1.0-alpha)*i_Pose2["x"]
+    i_Pose["y"] = alpha*i_Pose1["y"] + (1.0-alpha)*i_Pose2["y"]
+    i_Pose["z"] = alpha*i_Pose1["z"] + (1.0-alpha)*i_Pose2["z"]
+    i_Pose["rx"] = alpha*i_Pose1["rx"] + (1.0-alpha)*i_Pose2["rx"]
+    i_Pose["ry"] = alpha*i_Pose1["ry"] + (1.0-alpha)*i_Pose2["ry"]
+    i_Pose["rz"] = alpha*i_Pose1["rz"] + (1.0-alpha)*i_Pose2["rz"]
     return i_Pose
 
 # Alternate end effector arduino CMD

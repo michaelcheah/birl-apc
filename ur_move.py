@@ -54,9 +54,71 @@ def main():
     # loop
     print c.recv(1024)
     inp = raw_input("Continue?")
-    msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
     while True:
         task = raw_input("task: ")
+        if task == "gp":
+            while True:
+                ipt = int(raw_input("object 1-10: "))
+                if ipt==1:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                if ipt==2:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,4)
+                    msg = vac_pick(c,ser_ee,ser_vac,-500,100,2)
+                if ipt==3:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                if ipt==4:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                if ipt==5:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                elif ipt==6:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
+                    msg = grab_pick(c,ser_ee,ser_vac,-320,z=300,orientation=0,object_height=48)
+                elif ipt==7:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12)
+                elif ipt==8:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=15,angle_of_attack=89.9,shelf=1,size=20)
+                elif ipt==9:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=8,angle_of_attack=89.9,shelf=1,size=25)
+                elif ipt==10:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=50)
+        if task == "dg":
+            while True:
+                demand_Pose = {"x": -200, "y": -400.0, "z": random.uniform(20,150), "rx": 0.0, "ry": 180.0, "rz": 0.0}
+                msg = safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+                current_Pose = get_ur_position(c,1)
+                for i in range(0,3):
+                    if current_Pose[i]==0:
+                        ipt=raw_input("Continue?")
+        if task == "tr":
+            success_rate = [[0,0,0,0,0,0,0,0,0,0],
+                             [0,0,0,0,0,0,0,0,0,0]]
+            while True:
+                #initialize_waypoints()
+                ipt = int(raw_input("object 1-10: "))
+                if ipt < 6:
+                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                elif ipt==6:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
+                elif ipt==7:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12)
+                elif ipt==8:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=15,angle_of_attack=89.9,shelf=1,size=20)
+                elif ipt==9:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=8,angle_of_attack=89.9,shelf=1,size=25)
+                elif ipt==10:
+                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=50)
+                ipt2 = int(raw_input("fail/success (0/1): "))
+                success_rate[0][ipt-1]=success_rate[0][ipt-1]+1
+                if ipt2 == 1:
+                    success_rate[1][ipt-1]=success_rate[1][ipt-1]+1
+                for i in range(0,10):
+                    if success_rate[0][i]!=0:
+                        print "object ",i+1,": ",float(success_rate[1][i])," ot of ",float(success_rate[0][i])
         if task == "clean":
             clean_board(c,ser_ee,ser_vac)
         if task == "tally":
@@ -112,25 +174,25 @@ def main():
             height = int(raw_input("height: "))
             print grab_pick(c,ser_ee,ser_vac,y,z=Z,orientation=0,object_height=height)
         if task == "demo":
-            demand_Grip = copy.deepcopy(end_effector_home)
+            demand_Grip = dict(end_effector_home)
             while True:
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["tilt"] = 1
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["act"] = 30
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["servo"] = 0
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["vac"] = "g"
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["servo"] = 80
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["tilt"] = 0
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["vac"] = "r"
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["act"] = 50
-                msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),Grip=demand_Grip,CMD=2)
+                msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
         if task == "vac_stow":
             x = float(raw_input("x: "))
             y = float(raw_input("y: "))
@@ -143,14 +205,14 @@ def main():
             print vac_pick(c, ser_ee, ser_vac, y, z, shelf)
         if task == "shelf":
             shelf = int(raw_input("shelf: "))
-            #print safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
-            print safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints[shelf]),CMD=2)
-            #print safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
-            #print safe_ur_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_home_joints),CMD=2)
+            #print safe_ur_move(c,ser_ee,ser_vac,Pose=dict(shelf_joints_waypoint),CMD=2)
+            print safe_move(c,ser_ee,ser_vac,Pose=dict(shelf_joints[shelf]),CMD=2)
+            #print safe_ur_move(c,ser_ee,ser_vac,Pose=dict(shelf_joints_waypoint),CMD=2)
+            #print safe_ur_move(c,ser_ee,ser_vac,Pose=dict(shelf_home_joints),CMD=2)
         if task == "shelf_home":
-            print safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(shelf_joints_waypoint),CMD=2)
+            print safe_move(c,ser_ee,ser_vac,Pose=dict(shelf_joints_waypoint),CMD=2)
         if task == "home":
-            msg = safe_move(c,ser_ee,ser_vac,Pose=copy.deepcopy(grab_home_joints),CMD=2)
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
         if task == "force":
             print get_force(c)
         if task == "torque":
@@ -172,7 +234,7 @@ def main():
             demand_Pose["rz"] = float(raw_input("rz: "))
             msg = safe_ur_move(c,ser_ee,ser_vac,Pose=demand_Joints,CMD=4)
         if task == "grab":
-            demand_Grip = copy.deepcopy(end_effector_home)
+            demand_Grip = dict(end_effector_home)
             demand_Grip["act"] = int(raw_input("act: "))
             demand_Grip["servo"] = int(raw_input("servo: "))
             demand_Grip["tilt"] = int(raw_input("tilt: "))
