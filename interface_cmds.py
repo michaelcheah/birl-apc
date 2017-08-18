@@ -67,6 +67,24 @@ def serial_send(ser_ee,ser_vac,id,var):
                 break
     return
 
+def led_serial_send(ser_led,id,cluster,r,g,b):
+    # Serial CMDs
+    #print "Sending vacuum move"
+    ser_led.flushInput()
+    #ser_led.flushOutput()
+    # Set vacuum state, release = "r", grab = "g"
+    ser_led.write(id + chr(cluster) + chr(r) + chr(g) + chr(b) + "\n")
+    print b
+    # Wait for led arduino to finish
+    while True:
+        ipt = ser_led.readline()
+        print ipt
+        if ipt == "error\r\n":
+            ser_led.write(id + chr(cluster) + chr(r) + chr(g) + chr(b) + "\n")
+        if ipt == "done\r\n":
+            break
+    return
+
 # Safe Move CMDs
 # Send socket and serial CMDs
 # Returns reply from UR

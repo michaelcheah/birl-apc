@@ -40,23 +40,41 @@ def initialize():
    
     ser_ee = serial.Serial('COM5',9600)  # open serial port
     ser_vac = serial.Serial('COM3',9600)  # open serial port
-    while ser_ee.is_open==False & ser_vac.is_open==False:
+    ser_led = serial.Serial('COM10',9600)  # open serial port
+    while ser_ee.is_open==False & ser_vac.is_open==False: #& ser_led.is_open==False:
         print "Waiting for serial"
     print(ser_ee.name)         # check which port was really used
     print(ser_vac.name)         # check which port was really used
+    print(ser_led.name)         # check which port was really used
     time.sleep(2)
     print "Ready"
 
-    return c, ser_ee, ser_vac
+    return c, ser_ee, ser_vac, ser_led
 
 def main():
-    c, ser_ee, ser_vac = initialize()
+    c, ser_ee, ser_vac, ser_led = initialize()
     # loop
     print c.recv(1024)
     inp = raw_input("Continue?")
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
     while True:
         task = raw_input("task: ")
+        if task == "ls":
+            shelf = int(raw_input("cluster: "))
+            led_serial_send(ser_led,"C",shelf,255,255,255)
+            for i in range(0,6):
+                if i!= shelf:
+                    led_serial_send(ser_led,"C",i,0,0,0)
+            led_serial_send(ser_led,"S",1,0,0,0)
+        if task == "led":
+            while True:
+                #led_serial_send(ser_led,"I",3,127,0,0)
+                cmd = raw_input("cmd: ")
+                shelf = int(raw_input("cluster: "))
+                r = int(raw_input("r: "))
+                g = int(raw_input("g: "))
+                b = int(raw_input("b: "))
+                led_serial_send(ser_led,cmd,shelf,r,g,b)
         if task == "gp":
             while True:
                 ipt = int(raw_input("object 1-10: "))
