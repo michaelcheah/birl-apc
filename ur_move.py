@@ -20,7 +20,7 @@ from interface_cmds import *
 from object_grasping import *
 from ur_waypoints import *
 from demos import *
-from vision_copy import *
+#from vision_copy import *
 from naughts_and_crosses_demo import *
 
 def initialize():
@@ -41,7 +41,7 @@ def initialize():
     ser_ee = serial.Serial('COM5',9600)  # open serial port
     ser_vac = serial.Serial('COM3',9600)  # open serial port
     ser_led = serial.Serial('COM10',9600)  # open serial port
-    while ser_ee.is_open==False & ser_vac.is_open==False: #& ser_led.is_open==False:
+    while ser_ee.is_open==False & ser_vac.is_open==False & ser_led.is_open==False:
         print "Waiting for serial"
     print(ser_ee.name)         # check which port was really used
     print(ser_vac.name)         # check which port was really used
@@ -56,7 +56,7 @@ def main():
     # loop
     print c.recv(1024)
     inp = raw_input("Continue?")
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
+    #msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
     while True:
         task = raw_input("task: ")
         if task == "ls":
@@ -78,31 +78,33 @@ def main():
         if task == "gp":
             while True:
                 ipt = int(raw_input("object 1-10: "))
-                if ipt==1:
-                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                x = float(raw_input("x :"))
+                y = float(raw_input("y :"))
+                if ipt==1: #cd
+                    msg = vac_stow(c,ser_ee,ser_vac,x+35,y,1)
                     msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==2:
-                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,4)
+                if ipt==2: #book
+                    msg = vac_stow(c,ser_ee,ser_vac,x,y,4)
                     msg = vac_pick(c,ser_ee,ser_vac,-500,100,2)
-                if ipt==3:
-                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                if ipt==3: #erasor
+                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
                     msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==4:
-                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                if ipt==4: #tape_measure
+                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
                     msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==5:
-                    msg = vac_stow(c,ser_ee,ser_vac,-300,-400,1)
+                if ipt==5: #box
+                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
                     msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                elif ipt==6:
+                elif ipt==6: #mug
                     msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
                     msg = grab_pick(c,ser_ee,ser_vac,-320,z=300,orientation=0,object_height=48)
-                elif ipt==7:
+                elif ipt==7: #torch
                     msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12)
-                elif ipt==8:
+                elif ipt==8: #duct_tape
                     msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=15,angle_of_attack=89.9,shelf=1,size=20)
-                elif ipt==9:
+                elif ipt==9: #banana
                     msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=8,angle_of_attack=89.9,shelf=1,size=25)
-                elif ipt==10:
+                elif ipt==10: #tennis_ball
                     msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=50)
         if task == "dg":
             while True:
