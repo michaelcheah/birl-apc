@@ -14,6 +14,9 @@ from ur_waypoints import *
 # Depends on: x, y of object on table and desired shelf to deposit object
 # Returns string
 def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
+    # Set tool to tcp_5
+    socket_send(c,sCMD=104)
+    
     # Home
     demand_Pose = dict(grab_home)
     demand_Grip = dict(end_effector_home)
@@ -36,7 +39,7 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
 
     # Move to above the object
     current_Pose = get_ur_position(c,1)
-    demand_Pose = {"x":x,"y":y,"z":100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":x,"y":y,"z":110,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Move down until oject is reached
@@ -62,6 +65,9 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Joints),Grip=demand_Grip,CMD=2)
 
+    # Reset tool to tcp_1
+    socket_send(c,sCMD=100)
+    
     # Move closer to shelves
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
@@ -74,15 +80,19 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
     elif object_height < 100:
         shelf_depth = 788
     else:
+        shelf_depth = 650
         print "Object too tall"
 
+    yoff = 0.0
+    if shelf == 4:
+        yoff = -100.0
     # Raise end to object_height above the shelf
     current_Pose = get_ur_position(c,1)
-    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Move to back of shelf
-    demand_Pose = {"x":shelf_depth,"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":shelf_depth,"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Release vacuum at current position
@@ -92,7 +102,7 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf):
     time.sleep(2)
 
     # Exit shelf
-    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Return home

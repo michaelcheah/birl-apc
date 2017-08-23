@@ -25,7 +25,7 @@ from naughts_and_crosses_demo import *
 
 ##################################### Vision Imports ###########################################
 import numpy as np
-
+import os
 import vision_tools as vt
 from vision_tools import normclean2cv2
 import kinect_vision as kv
@@ -67,9 +67,10 @@ def initialize():
 def main():
     c, ser_ee, ser_vac, ser_led = initialize()
     # loop
+    led_serial_send(ser_led,"I",2,0,2,0)
     print c.recv(1024)
     inp = raw_input("Continue?")
-    #msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
+    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),CMD=2)
     
     ##################### Vision Initialise #####################################
     directory = PATH_TO_KINECT_IMAGES_DIR
@@ -107,6 +108,8 @@ def main():
                 rgb, depth, ir = cali_all
 
                 np.savez(os.path.join(PATH_TO_KINECT_IMAGES_DIR, 'im_array_cal_FINAL'), rgb=rgb, depth=depth, ir=ir)
+            
+            directory = PATH_TO_KINECT_IMAGES_DIR
 
             cali = kv.load_npz_as_array("im_array_cal_FINAL", directory)
             empt = kv.load_npz_as_array("im_array_empty_FINAL", directory)
@@ -114,9 +117,44 @@ def main():
             empt_all = kv.prepare_im_array(empt)
             cali_all = kv.prepare_im_array(cali)
 
+            rgb, depth, ir = empt_all
+            rgb, depth, ir = cali_all
+
             depth_cali = run_calibration(empt_all, cali_all, adjust=True)
-            rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali, adjust=False)
+
+            rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali, adjust=True)
     
+        if task == "gh":
+            # Set tool to tcp_5
+            socket_send(c,sCMD=104)
+    
+            # Home
+            demand_Pose = dict(grab_home)
+            demand_Grip = dict(end_effector_home)
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home_joints),Grip=demand_Grip,CMD=2)
+
+            # Rotate end effector
+            current_Joints = get_ur_position(c,3)
+            demand_Joints = {"x":current_Joints[0],"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4]+60,"rz":current_Joints[5]-45}
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Joints),Grip=demand_Grip,CMD=2)
+
+            # Avoid camera mount
+            current_Pose = get_ur_position(c,1)
+            demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":150,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
+            # Rotate base
+            current_Joints = get_ur_position(c,3)
+            demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Joints),Grip=demand_Grip,CMD=2)
+
+            x = float(raw_input("x: "))
+            y = float(raw_input("y: "))
+            
+            # Move to above the object
+            current_Pose = get_ur_position(c,1)
+            demand_Pose = {"x":x,"y":y,"z":100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+            msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
         if task == "ls":
             shelf = int(raw_input("cluster: "))
             led_serial_send(ser_led,"C",shelf,255,255,255)
@@ -148,7 +186,7 @@ def main():
 
             normclean, sorted_family = run_image_processing_v2_depth(test_all, 
                                                                      depth_cali, 
-                                                                     show=True)
+                                                                     show=False)
 
             rgbnormclean, rgb_family, test_rgbx_img = run_image_processing_v2_rgb(test_all, 
                                                                                   rgb_cali, 
@@ -159,32 +197,50 @@ def main():
 
             depth_normclean = normclean2cv2(normclean)
             rgb_normclean = normclean2cv2(rgbnormclean)
-
-            test_rgb_img = vt.convert2rgb(test_rgbx_img[0])
+            
+            
+            test_rgb_img = vt.convert2rgb(test_rgbx_img)
+            
+            cv2.imwrite("test_rgb_img.jpg", test_rgb_img)
 
             ####### Create List of Objects and match the rgb and depth data ##########
             object_list = match_rgb_with_depth_v2(sorted_family, rgb_family, depth_normclean, test_rgb_img)
+            
+
+            
+            #cv2.imwrite("test_rgb_img.jpg", test_rgb_img)
+            cv2.imwrite("depth_normclean.jpg", depth_normclean)
 
             pick_obj = object_list['1']
 
             if pick_obj.height[0] == 0:
                 ipt = 1
                 print "Object is cd"
+                x_pix = pick_obj.rgb_centre[0]
+                y_pix = pick_obj.rgb_centre[1]
             else:
-                if pick_obj.circularness > 0.75:
+                if pick_obj.circularness > 0.70:
                     ipt = 4
                     print "Object is tape measure"
+                    x_pix = pick_obj.centre[0]
+                    y_pix = pick_obj.centre[1]
                 else:
                     if pick_obj.rgb_aspect > 0.8:
                         ipt = 5
                         print "Object is a box"
+                        x_pix = pick_obj.rgb_centre[0]
+                        y_pix = pick_obj.rgb_centre[1]
                     else:
                         if pick_obj.rgb_aspect < 0.6:
                             ipt = 3
                             print "Object is eraser"
+                            x_pix = pick_obj.centre[0]
+                            y_pix = pick_obj.centre[1]
                         else:
                             ipt = 2
                             print "Object is book"
+                            x_pix = pick_obj.rgb_centre[0]
+                            y_pix = pick_obj.rgb_centre[1]
             
             print "~~~~~~~~~~~~~~ OBJECT ATTRIBUTES ~~~~~~~~~~~~~~~"
             print "Height:       ", pick_obj.height
@@ -196,52 +252,90 @@ def main():
             except:
                 print "no depth"
             
-            
-            x_pix = pick_obj.rgb_centre[0]
-            y_pix = pick_obj.rgb_centre[1]
-            
             circles = depth_cali[4]
             cali_circles_init = circles-circles[0][0]
             cali_circles=[]
             for circ in cali_circles_init[0]:
                 cali_circles.append([circ[0]/2, circ[1]/2])
+            print x_pix, y_pix
             print cali_circles
             
             p=[x_pix,y_pix]
-            p1, inverse = pix3world_cal(cali_circles[0],cali_circles[1], cali_circles[2])
+            
+            plt.figure("Circles")
+            cv2.circle(test_rgb_img,(int(x_pix),int(y_pix)),3,(0,0,255),1)
+            cv2.circle(test_rgb_img,(int(x_pix),int(y_pix)),2,(0,0,255),1)
+            plt.imshow(test_rgb_img)
+            #plt.show()
+            cv2.imwrite("test_rgb_img_centre.jpg", test_rgb_img)
+            
+            p1, inverse = pix3world_cal(cali_circles[0],cali_circles[2], cali_circles[1])
             x,y = pix3world(p1, inverse, p)
+            x = x[0,0]
+            y = y[0,0]
             print x,y
-                    
-            while True:
-                #ipt = int(raw_input("object 1-10: "))
-                #x = float(raw_input("x :"))
-                #y = float(raw_input("y :"))
-                if ipt==1: #cd
-                    msg = vac_stow(c,ser_ee,ser_vac,x+35,y,1)
-                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==2: #book
-                    msg = vac_stow(c,ser_ee,ser_vac,x,y,4)
-                    msg = vac_pick(c,ser_ee,ser_vac,-500,100,2)
-                if ipt==3: #erasor
-                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
-                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==4: #tape_measure
-                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
-                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                if ipt==5: #box
-                    msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
-                    msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
-                elif ipt==6: #mug
-                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
-                    msg = grab_pick(c,ser_ee,ser_vac,-320,z=300,orientation=0,object_height=48)
-                elif ipt==7: #torch
-                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12)
-                elif ipt==8: #duct_tape
-                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=15,angle_of_attack=89.9,shelf=1,size=20)
-                elif ipt==9: #banana
-                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=8,angle_of_attack=89.9,shelf=1,size=25)
-                elif ipt==10: #tennis_ball
-                    msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=50)
+            
+            led_serial_send(ser_led,"I",2,0,0,0)
+            #ipt = int(raw_input("object 1-10: "))
+            #x = float(raw_input("x :"))
+            #y = float(raw_input("y :"))
+            if ipt==1: #cd
+                led_serial_send(ser_led,"C",1,255,255,0)
+                for i in range(0,6):
+                    if i!= 1:
+                        led_serial_send(ser_led,"C",i,0,0,0)
+                led_serial_send(ser_led,"S",1,0,0,0)
+                msg = vac_stow(c,ser_ee,ser_vac,x+35,y,1)
+                #msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+            if ipt==2: #book
+                led_serial_send(ser_led,"C",4,255,0,0)
+                led_serial_send(ser_led,"C",5,255,0,0)
+                for i in range(0,6):
+                    if i!= 4 and i!=5:
+                        led_serial_send(ser_led,"C",i,0,0,0)
+                led_serial_send(ser_led,"S",1,0,0,0)
+                msg = vac_stow(c,ser_ee,ser_vac,x,y,4)
+                #msg = vac_pick(c,ser_ee,ser_vac,-500,100,2)
+            if ipt==3: #erasor
+                led_serial_send(ser_led,"C",4,0,0,255)
+                led_serial_send(ser_led,"C",5,0,0,255)
+                for i in range(0,6):
+                    if i!= 4 and i!=5:
+                        led_serial_send(ser_led,"C",i,0,0,0)
+                led_serial_send(ser_led,"S",1,0,0,0)
+                msg = vac_stow(c,ser_ee,ser_vac,x,y,4)
+                #msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+            if ipt==4: #tape_measure
+                led_serial_send(ser_led,"C",1,0,255,0)
+                for i in range(0,6):
+                    if i!= 1:
+                        led_serial_send(ser_led,"C",i,0,0,0)
+                led_serial_send(ser_led,"S",1,0,0,0)
+                msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
+                #msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+            if ipt==5: #box
+                led_serial_send(ser_led,"C",1,255,0,255)
+                for i in range(0,6):
+                    if i!= 1:
+                        led_serial_send(ser_led,"C",i,0,0,0)
+                led_serial_send(ser_led,"S",1,0,0,0)
+                msg = vac_stow(c,ser_ee,ser_vac,x,y,1)
+                #msg = vac_pick(c,ser_ee,ser_vac,-100,300,2)
+            elif ipt==6: #mug
+                msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
+                msg = grab_pick(c,ser_ee,ser_vac,-320,z=300,orientation=0,object_height=48)
+            elif ipt==7: #torch
+                msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12)
+            elif ipt==8: #duct_tape
+                msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=15,angle_of_attack=89.9,shelf=1,size=20)
+            elif ipt==9: #banana
+                msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=8,angle_of_attack=89.9,shelf=1,size=25)
+            elif ipt==10: #tennis_ball
+                msg = grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=50)
+            for i in range(0,6):
+                led_serial_send(ser_led,"C",i,0,0,0)
+            led_serial_send(ser_led,"S",1,0,0,0)
+            led_serial_send(ser_led,"I",2,0,2,0)
         if task == "dg":
             while True:
                 demand_Pose = {"x": -200, "y": -400.0, "z": random.uniform(20,150), "rx": 0.0, "ry": 180.0, "rz": 0.0}

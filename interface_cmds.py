@@ -51,7 +51,7 @@ def serial_send(ser_ee,ser_vac,id,var):
         # Wait for vacuum arduino to finish
         while True:
             ipt = ser_vac.readline()
-            print ipt
+            #print ipt
             if ipt == "done\r\n":
                 break
     else:
@@ -62,7 +62,7 @@ def serial_send(ser_ee,ser_vac,id,var):
         # Wait for end effector arduino to finish
         while True:
             ipt = ser_ee.readline()
-            print ipt
+            #print ipt
             if ipt == "done\r\n":
                 break
     return
@@ -71,7 +71,7 @@ def led_serial_send(ser_led,id,cluster,r,g,b):
     # Serial CMDs
     #print "Sending vacuum move"
     ser_led.flushInput()
-    #ser_led.flushOutput()
+    ser_led.flushOutput()
     # Set vacuum state, release = "r", grab = "g"
     ser_led.write(id + chr(cluster) + chr(r) + chr(g) + chr(b) + "\n")
     print b
