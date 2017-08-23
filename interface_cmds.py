@@ -31,11 +31,11 @@ def socket_send(c, sPose=dict(grab_home), sSpeed = 0.75, sCMD = 0):
     try:
         # Send formatted CMD
         c.send("("+str(sendPose["x"])+","+str(sendPose["y"])+","+str(sendPose["z"])+","+str(sendPose["rx"])+","+str(sendPose["ry"])+","+str(sendPose["rz"])+","+str(sCMD)+","+str(sSpeed)+")");
-        #print "Sent ur move"
+        print "Sent ur move"
         # Wait for reply
         msg=c.recv(1024)
-        #print msg
-        #print ""
+        print msg
+        print ""
     except socket.error as socketerror:
         print ".......................Some kind of error :(......................."
     # Return reply
@@ -51,7 +51,7 @@ def serial_send(ser_ee,ser_vac,id,var):
         # Wait for vacuum arduino to finish
         while True:
             ipt = ser_vac.readline()
-            #print ipt
+            print ipt
             if ipt == "done\r\n":
                 break
     else:
@@ -62,7 +62,7 @@ def serial_send(ser_ee,ser_vac,id,var):
         # Wait for end effector arduino to finish
         while True:
             ipt = ser_ee.readline()
-            #print ipt
+            print ipt
             if ipt == "done\r\n":
                 break
     return
@@ -105,9 +105,9 @@ def end_effector_move(ser_ee,ser_vac,Grip):
     # Serial CMDs
     serial_send(ser_ee,ser_vac,"A",Grip["act"])
     ipt = ser_ee.readline()
-    #print "sw state = ",ipt
+    print "sw state = ",ipt
     ipt = ser_ee.readline()
-    #print "Timeout = ",ipt
+    print "Timeout = ",ipt
 
     serial_send(ser_ee,ser_vac,"G",Grip["servo"])
 

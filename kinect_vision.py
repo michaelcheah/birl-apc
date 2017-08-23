@@ -9,9 +9,39 @@ from numpysocket_class import numpysocket, HOST, PORT
 import vision_tools as vt
 PATH_TO_KINECT_IMAGES_DIR = "kinect_images"
 
+from freenect2 import Device, FrameType
+
 
 CAL_PARAM = {'thresh': [65,100],
             'radius': [4, 9]}
+
+def capture_frames(register=False):
+    device = Device()
+    frames = {}
+    with device.running():
+        for type_, frame in device:
+            frames[type_] = frame
+            if FrameType.Color in frames and FrameType.Depth in frames and FrameType.Ir in frames:
+                break
+        
+    rgb, depth, ir = frames[FrameType.Color], frames[FrameType.Depth], frames[FrameType.Ir]
+    image = {}
+    image['rgb'] = rgb.to_array()
+    image['depth'] = depth.to_array()
+    image['ir'] = ir.to_array()
+    
+    b,g,r,x = cv2.split(image['rgb'])
+    image['rgb'] = cv2.merge([r,g,b])
+    
+    for type_ in image.keys():
+        image[type_] = np.rot90(image[type_], 1)
+        image[type_] = np.fliplr(image[type_])
+    
+    if register == False:
+        return image
+    if register == True:
+        depth_rect, color_rect = device.registration.apply(rgb, depth, enable_filter=False)
+        return depth_rect, color_rect
 
 def make_path_exist(path):
     try:
@@ -68,13 +98,14 @@ def load_npz_as_array(npz_filename, directory=PATH_TO_KINECT_IMAGES_DIR):
         print ("Cannot convert "+npz_filename+" to array")
     return im_array
 
-def prepare_im_array(npzfile_):
-    npzfile = copy.copy(npzfile_)
+def prepare_im_array(dictionary):
+    npzfile = copy.copy(dictionary)
 
     rgb = npzfile['rgb']
     depth = npzfile['depth']
     ir = npzfile['ir']
     
+    ir = ir - ir.min()
     ir /= ir.max()
     ir= np.sqrt(ir)
 
@@ -86,52 +117,55 @@ def extract_depth_contours(cnts, hierarchy, image, minsize=80, fineness=0.01, sh
     retain_list = []
     hier = copy.copy(hierarchy)
     used_img = copy.copy(image)
-    
-    for (i,c) in enumerate(cnts):
-        if cv2.contourArea(c) < minsize:
-            continue
-        
-        epsilon = (fineness*cv2.arcLength(c,True))
-        approx = cv2.approxPolyDP(c, epsilon, True)
-        
-        retain_list.append(i)
-        
-        box = np.array(approx, dtype="int")
-        new_cnts.append([box])
-        
-        if show==True:
-            cimg = vt.convert2rgb(used_img, 'uint8')
-            cv2.drawContours(cimg, [box], -1, (5,205,5), 1)
-            extRight = box[np.argmax(box[:,:,0])][0]
-            cv2.putText(cimg, "contour {}".format(i),
-                (extRight[0],extRight[1]),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.25, (25, 0, 255), 1)
-            plt.figure()
-            plt.imshow(cimg)
+    if hier is None:
+        new_cnts = []
+        new_h = []
+    else:
+        for (i,c) in enumerate(cnts):
+            if cv2.contourArea(c) < minsize:
+                continue
 
-    for i in range(np.shape(hier)[1]):
-        if i not in retain_list:
-            hier[hier==i]=-1
+            epsilon = (fineness*cv2.arcLength(c,True))
+            approx = cv2.approxPolyDP(c, epsilon, True)
 
-    new_h = np.zeros((1,len(retain_list),4))
-    
-    for i,j in enumerate(retain_list):
-        new_h[0][i] = hier[0][j]
-        
-    for i,j in enumerate(retain_list):
-        new_h[new_h==j]=i
-    
-    new_h = new_h.astype('int8')
+            retain_list.append(i)
 
-    
-    for j,k in enumerate(new_h[0]):
-        if k[3]!=-1:
-            if new_h[0][k[3]][2] == -1:
-                new_h[0][k[3]][2] = j
-            if k[3]==new_h[0][j-1][3]:
-                new_h[0][j][1]=j-1
-                new_h[0][j-1][0]=j
-    
+            box = np.array(approx, dtype="int")
+            new_cnts.append([box])
+
+            if show==True:
+                cimg = vt.convert2rgb(used_img, 'uint8')
+                cv2.drawContours(cimg, [box], -1, (5,205,5), 1)
+                extRight = box[np.argmax(box[:,:,0])][0]
+                cv2.putText(cimg, "contour {}".format(i),
+                    (extRight[0],extRight[1]),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.25, (25, 0, 255), 1)
+                plt.figure()
+                plt.imshow(cimg)
+
+        for i in range(np.shape(hier)[1]):
+            if i not in retain_list:
+                hier[hier==i]=-1
+
+        new_h = np.zeros((1,len(retain_list),4))
+
+        for i,j in enumerate(retain_list):
+            new_h[0][i] = hier[0][j]
+
+        for i,j in enumerate(retain_list):
+            new_h[new_h==j]=i
+
+        new_h = new_h.astype('int8')
+
+
+        for j,k in enumerate(new_h[0]):
+            if k[3]!=-1:
+                if new_h[0][k[3]][2] == -1:
+                    new_h[0][k[3]][2] = j
+                if k[3]==new_h[0][j-1][3]:
+                    new_h[0][j][1]=j-1
+                    new_h[0][j-1][0]=j
+
     return new_cnts, new_h
 def create_family(test_cnts, test_h):
     generation = [0 for i in range(len(test_h[0]))]
@@ -180,7 +214,7 @@ def sort_family(family, depth_image, height_resolution=0.04, debug=False, show=F
         for member_id, member in enumerate(family):
             parent_mask = np.zeros(depth_img.shape, np.uint8)
             parent_mask = cv2.drawContours(parent_mask, member['contour'], -1, (255), -1)
-            family[member_id]['height']=vt.find_mean_in_contour(depth_img, child_mask[num], show=show)
+            family[member_id]['height']=vt.find_mean_in_contour(depth_img, parent_mask, show=show)
     
     for i in range(max_gen):
         for member_id, member in enumerate(family):

@@ -163,19 +163,33 @@ class TableObject(object):
         self.name = name
     
     def add_depth(self, depth_object):
-        self.contour = depth_object.contour
-        self.height = depth_object.height
-        self.children = depth_object.children
-        self.generation = depth_object.generation
-        self.nuclear = depth_object.nuclear
-        self.id = depth_object.id
+        try:
+            
+            self.contour = depth_object.contour
+            self.height = depth_object.height
+            self.children = depth_object.children
+            self.generation = depth_object.generation
+            self.nuclear = depth_object.nuclear
+            self.id = depth_object.id
 
-        #Call all methods
-        self.children_info = depth_object.children_info
-        self.box = depth_object.box
-        self.centre = depth_object.centre
-        self.radius = depth_object.radius
-        self.area = depth_object.area
+            #Call all methods
+            self.children_info = depth_object.children_info
+            self.box = depth_object.box
+            self.centre = depth_object.centre
+            self.radius = depth_object.radius
+            self.area = depth_object.area
+
+            # Extra
+            self.aspect = depth_object.aspect
+            self.circularness = depth_object.circularness
+            self.fill = depth_object.fill
+            
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print "There is no depth data to be added"
+            print message
+    
     
     def prepare_data(self):
         try:
@@ -197,8 +211,12 @@ class TableObject(object):
             rgb_boundCircleArea = np.pi*(self.rgb_radius)**2
             rgb_circularness = self.rgb_area/rgb_boundCircleArea
             self.rgb_circularness = rgb_circularness
-        except:
+            
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
             print "RGB data not considered"
+            print message
     
         try:
             # FILL
@@ -218,9 +236,13 @@ class TableObject(object):
             # CIRCULARNESS
             boundCircleArea = np.pi*(self.radius)**2
             circularness = self.area/boundCircleArea
-            self.circularness
-        except:
+            self.circularness = circularness
+            
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
             print "Depth data not implemented"
+            print message
             
     def label_data_auto(self):
         if self.height[0] == 0:
@@ -233,29 +255,33 @@ def find_object(image, family=None, rgb_family=None, label=True):
     if label is False:
         object_id = 1
     img = copy.copy(image)
-    if family is None:
+    if rgb_family is not None:
         curr_family = rgb_family  
-    else:
+    elif family is not None:
         curr_family = family
+    else:
+        curr_family = [{'generation': 0, 'id': -1}]
     for obj in curr_family:
         if obj['generation']==0:
-            box = cv2.minAreaRect(np.array(obj['contour'])[0])
-            box = cv2.boxPoints(box)
-            box = np.array(box, dtype="int")
-            cv2.drawContours(img, [box], -1, (255,0,0), 1)
+            if obj['id']>=0:
+                box = cv2.minAreaRect(np.array(obj['contour'])[0])
+                box = cv2.boxPoints(box)
+                box = np.array(box, dtype="int")
+                cv2.drawContours(img, [box], -1, (255,0,0), 1)
             
-            if rgb_family is None:
-                tobj = TableObject(member = obj, family = family)
-            else:
-                tobj = TableObject(rgb_member = obj)
-                TableObject.find_rgb_average(tobj, img)
-            if label:
-                TableObject.label_object(tobj, img)
-                Object_List[tobj.name] = tobj
-            else:
-                Object_List[str(object_id)] = tobj
-                object_id = object_id+1
-    
+            
+                if rgb_family is None:
+                    tobj = TableObject(member = obj, family = family)
+                else:
+                    tobj = TableObject(rgb_member = obj)
+                    TableObject.find_rgb_average(tobj, img)
+                if label:
+                    TableObject.label_object(tobj, img)
+                    Object_List[tobj.name] = tobj
+                else:
+                    Object_List[str(object_id)] = tobj
+                    object_id = object_id+1
+
     return Object_List
         
 def match_rgb_with_depth(family, rgb_family, image, rgb_image, label=True):
@@ -290,11 +316,14 @@ def match_rgb_with_depth_v2(family, rgb_family, image, rgb_image, label=False):
                 obj_list[item].add_depth(depth_obj_list[item])
 
     else:
-        depth_obj_list = find_object(family=family, image=img, label=label)
+        print "Making depth List ..."
+        depth_list = find_object(family=family, image=img, label=label)
+        print "Making rgb object list..."
         obj_list = find_object(rgb_family=rgb_family, image=rgb_img, label=label)
+        print "Length of depth and obj lists:", len(depth_list), len(obj_list)
         for item in obj_list.keys():
             contour = obj_list[item].item_contour[0]
-            mask = vt.create_contour_mask([contour], depth_normclean)
+            mask = vt.create_contour_mask([contour], img)
             final = 0.5
             most_likely_depth = '0'
 
@@ -321,13 +350,10 @@ def match_rgb_with_depth_v2(family, rgb_family, image, rgb_image, label=False):
                 print item, ": No depth profile found"
 
             else:
-                mask2 = vt.create_contour_mask([depth_list[most_likely_depth].contour[0]], depth_normclean)
+                mask2 = vt.create_contour_mask([depth_list[most_likely_depth].contour[0]], img)
                 mask = mask-mask2
                 obj_list[item].add_depth(depth_list[most_likely_depth])
         
         print "Matched based on Contour Overlap"
 
     return obj_list
-
-
-def create_

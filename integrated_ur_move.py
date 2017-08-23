@@ -33,13 +33,12 @@ from kinect_vision import PATH_TO_KINECT_IMAGES_DIR
 from image_processing import run_calibration, run_calibration_rgb
 from image_processing import run_image_processing_v2_depth, run_image_processing_v2_rgb
 
-from tableObject_class import TableObject, match_rgb_with_depth
-
-
+from tableObject_class import TableObject, match_rgb_with_depth, match_rgb_with_depth_v2
 
 def initialize():
     #HOST = "169.254.103.235" # The remote host
-    HOST = "192.168.1.105" # The remote host
+    #HOST = "192.168.1.105" # The remote host
+    HOST = "169.254.242.158"
     PORT = 30000 # The same port as used by the server
 
     print "Starting Program"
@@ -52,10 +51,10 @@ def initialize():
 
     print "Connected to UR"
    
-    ser_ee = serial.Serial('COM5',9600)  # open serial port
-    ser_vac = serial.Serial('COM3',9600)  # open serial port
-    ser_led = serial.Serial('COM10',9600)  # open serial port
-    while ser_ee.is_open==False & ser_vac.is_open==False & ser_led.is_open==False:
+    ser_ee = serial.Serial('/dev/ttyACM0',9600)  # open serial port
+    ser_vac = serial.Serial('/dev/ttyACM1',9600)  # open serial port
+    ser_led = serial.Serial('/dev/ttyACM2',9600)  # open serial port
+    while ser_ee.isOpen()==False & ser_vac.isOpen()==False & ser_led.isOpen()==False:
         print "Waiting for serial"
     print(ser_ee.name)         # check which port was really used
     print(ser_vac.name)         # check which port was really used
@@ -74,34 +73,50 @@ def main():
     
     ##################### Vision Initialise #####################################
     directory = PATH_TO_KINECT_IMAGES_DIR
-
-    cali_num = str(1)
     
-    cali = kv.load_npz_as_array("im_array_cal"+cali_num, directory)
-    empt = kv.load_npz_as_array("im_array_empty"+cali_num, directory)
+    cali = kv.load_npz_as_array("im_array_cal_FINAL", directory)
+    empt = kv.load_npz_as_array("im_array_empty_FINAL", directory)
     
     empt_all = kv.prepare_im_array(empt)
     cali_all = kv.prepare_im_array(cali)
 
-    depth_cali = run_calibration(empt_all, cali_all)
-    rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali)
+    depth_cali = run_calibration(empt_all, cali_all, adjust=False)
+    rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali, adjust=False)
     
     while True:
         task = raw_input("task: ")
         
         ################ Calibration Step if needed #######################################
         if task == "calibrate":
-            cali_num = str(1)
-    
-            cali = kv.load_npz_as_array("im_array_cal"+cali_num, directory)
-            empt = kv.load_npz_as_array("im_array_empty"+cali_num, directory)
+            
+            calibrate_check1 = raw_input("Prepared for Empty Capture?: ")
+            if calibrate_check1 == "yes":
+                print "empty"
+                empt = kv.capture_frames()
+                plt.imshow(empt['ir'])
+                plt.show()
+                empt_all = kv.prepare_im_array(empt)
+                rgb, depth, ir = empt_all
+                np.savez(os.path.join(PATH_TO_KINECT_IMAGES_DIR, 'im_array_empty_FINAL'), rgb=rgb, depth=depth, ir=ir)
+
+            calibrate_check2 = raw_input("Prepared for Calibrate Capture?: ")
+            if calibrate_check2 == "yes":
+                cali = kv.capture_frames()
+                print "cali"
+                cali_all = kv.prepare_im_array(cali)
+                rgb, depth, ir = cali_all
+
+                np.savez(os.path.join(PATH_TO_KINECT_IMAGES_DIR, 'im_array_cal_FINAL'), rgb=rgb, depth=depth, ir=ir)
+
+            cali = kv.load_npz_as_array("im_array_cal_FINAL", directory)
+            empt = kv.load_npz_as_array("im_array_empty_FINAL", directory)
 
             empt_all = kv.prepare_im_array(empt)
             cali_all = kv.prepare_im_array(cali)
 
-            depth_cali = run_calibration(empt_all, cali_all)
-            rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali)    
-        
+            depth_cali = run_calibration(empt_all, cali_all, adjust=True)
+            rgb_cali = run_calibration_rgb(empt_all, cali_all, depth_cali, adjust=False)
+    
         if task == "ls":
             shelf = int(raw_input("cluster: "))
             led_serial_send(ser_led,"C",shelf,255,255,255)
@@ -120,44 +135,38 @@ def main():
                 led_serial_send(ser_led,cmd,shelf,r,g,b)
         if task == "gp":
             while(1):
-                test_num = raw_input("Please choose test picture number: ")
-                try:
-                    test = kv.load_npz_as_array("im_array_"+test_num, directory)
+                capture_check = raw_input("Ready?: ")
+                if capture_check == "yes":
+                    test = kv.capture_frames()
                     test_all = kv.prepare_im_array(test)
-                    break
-                except:
-                    print "Error, file doesn't exist"
-                    if test_num == "end":
-                        break
-                if test_num == "end":
                     break
 
             ######## Process Test Image and Retrieve Depth and Contour Information from Depth and RGB Data ##########
-            
+
+            rgb, depth, ir = test_all
+
+
             normclean, sorted_family = run_image_processing_v2_depth(test_all, 
                                                                      depth_cali, 
-                                                                     show=False)
-            
+                                                                     show=True)
+
             rgbnormclean, rgb_family, test_rgbx_img = run_image_processing_v2_rgb(test_all, 
                                                                                   rgb_cali, 
                                                                                   depth_cali, 
                                                                                   show=False)
 
             ######## Clean the images and convert them so that they are cv2 compatible ############
-            
+
             depth_normclean = normclean2cv2(normclean)
             rgb_normclean = normclean2cv2(rgbnormclean)
 
             test_rgb_img = vt.convert2rgb(test_rgbx_img[0])
 
-            b,g,r,x = cv2.split(test_rgbx_img)
-            test_rgb_img = cv2.merge([r,g,b])
-            
             ####### Create List of Objects and match the rgb and depth data ##########
             object_list = match_rgb_with_depth_v2(sorted_family, rgb_family, depth_normclean, test_rgb_img)
-            
+
             pick_obj = object_list['1']
-            
+
             if pick_obj.height[0] == 0:
                 ipt = 1
                 print "Object is cd"
@@ -166,21 +175,42 @@ def main():
                     ipt = 4
                     print "Object is tape measure"
                 else:
-                    if pick_object.rgb_aspect > 0.8:
+                    if pick_obj.rgb_aspect > 0.8:
                         ipt = 5
                         print "Object is a box"
                     else:
-                        if pick_object.aspect < 0.6:
+                        if pick_obj.rgb_aspect < 0.6:
                             ipt = 3
                             print "Object is eraser"
                         else:
                             ipt = 2
                             print "Object is book"
-                    ipt = 4
-                    print "Object is tape measure
-                    
-            x = pick_obj[0]
-            y = pick_obj[1]
+            
+            print "~~~~~~~~~~~~~~ OBJECT ATTRIBUTES ~~~~~~~~~~~~~~~"
+            print "Height:       ", pick_obj.height
+
+
+            print "RGB Aspect:   ", pick_obj.rgb_aspect
+            try:
+                print "Circularness: ", pick_obj.circularness
+            except:
+                print "no depth"
+            
+            
+            x_pix = pick_obj.rgb_centre[0]
+            y_pix = pick_obj.rgb_centre[1]
+            
+            circles = depth_cali[4]
+            cali_circles_init = circles-circles[0][0]
+            cali_circles=[]
+            for circ in cali_circles_init[0]:
+                cali_circles.append([circ[0]/2, circ[1]/2])
+            print cali_circles
+            
+            p=[x_pix,y_pix]
+            p1, inverse = pix3world_cal(cali_circles[0],cali_circles[1], cali_circles[2])
+            x,y = pix3world(p1, inverse, p)
+            print x,y
                     
             while True:
                 #ipt = int(raw_input("object 1-10: "))

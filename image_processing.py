@@ -19,21 +19,30 @@ def run_calibration(empt_all, cali_all, adjust=True, show=True):
     
     empt_ir = cv2.resize(empt_ir, (0,0), fx=2, fy=2)
     
-    CAL_PARAM = {'thresh': [85,220],
-                 'radius': [10, 16]}
-    BLACK = [270,760,230,670]
+    CAL_PARAM = {'thresh': [85,100],
+                 'radius': [8, 16]}
+    BLACK = [250, 720, 250, 650]
+    
+    #for i in range(len(empt_ir)):
+    #    if empt_ir[i].max() <0.4:
+    #        print i,
+    #    if empt_ir[i].max() == 0:
+    #        empt_ir = empt_ir[i:-1, 0:-1]
+    #        print "CROP NEEDED"
     
     copy_empt_ir = copy.copy(empt_ir)
     
     while True:
         empt_ir2 = vt.convert2gray(copy_empt_ir*255, "uint8")
         empt_ir3 = vt.black_out(empt_ir2, BLACK)
-        empt_circles, empt_cimg = vt.find_circles(empt_ir3, 2, param=CAL_PARAM, blur=1, show=False)
+        empt_circles, empt_cimg = vt.find_circles(empt_ir3, 2, param=CAL_PARAM, blur=3, show=False)
         empt_sort,crop = vt.sort_circles3(empt_circles)
         
         empt_ir_img = vt.crop_out(empt_cimg, crop)
         
         if adjust: 
+            plt.figure("CIRCLE IMAGE")
+            plt.imshow(empt_cimg)
             plt.figure("CROPPED EMPTY IMAGE")
             plt.imshow(empt_ir_img)
             plt.show()
@@ -66,22 +75,22 @@ def run_calibration(empt_all, cali_all, adjust=True, show=True):
         else:
             break
     #get normclean
-    crop = [i/2 for i in crop]
-    empt_img = vt.crop_out(empt_depth, crop)
-    cali_img = vt.crop_out(cali_depth, crop)
+    new_crop = [i/2 for i in crop]
+    empt_img = vt.crop_out(empt_depth, new_crop)
+    cali_img = vt.crop_out(cali_depth, new_crop)
 
     empt_img = vt.clean_image(empt_img)
     cali_img = vt.clean_image(cali_img)
     
     depth_shape = (np.shape(empt_img)[1], np.shape(empt_img)[0])
     
-    depth_cal = [empt_img, cali_img, crop, depth_shape]
+    depth_cal = [empt_img, cali_img, new_crop, depth_shape, empt_sort]
     
     return depth_cal
 
 
 def run_calibration_rgb(empt_all, cali_all, depth_cal, adjust=True, show=True):
-    empt_img, cali_img, crop, depth_shape = depth_cal
+    empt_img, cali_img, crop, depth_shape, empt_sort = depth_cal
     
     empt, empt_depth, empt_ir = empt_all
     cali, cali_depth, cali_ir = cali_all
@@ -91,7 +100,7 @@ def run_calibration_rgb(empt_all, cali_all, depth_cal, adjust=True, show=True):
     RGB_CAL_PARAM = {'thresh': [85,220],
                     'radius': [5, 8]}
     
-    RGB_BLACK = [300,630,100,430]
+    RGB_BLACK = [250,630,100,480]
     
     while True:
         empt_2 = vt.convert2gray(empt*255, "uint8")
@@ -114,7 +123,7 @@ def run_calibration_rgb(empt_all, cali_all, depth_cal, adjust=True, show=True):
             else:
                 rgb_cal_check = raw_input("Change calibration?: ")
                 if rgb_cal_check == "yes":
-                    print CAL_PARAM
+                    print RGB_CAL_PARAM
                     t1 = raw_input("Thresh 1: ")
                     t2 = raw_input("Thresh 2: ")
                     r1 = raw_input("Radius 1: ")
@@ -142,12 +151,17 @@ def run_calibration_rgb(empt_all, cali_all, depth_cal, adjust=True, show=True):
 
 def run_image_processing_v2_depth(test_all, depth_cal, show=True):
     # Prepare Calibration Values
-    empt_img, cali_img, crop, depth_shape = depth_cal
+    empt_img, cali_img, crop, depth_shape, empt_sort = depth_cal
     
     #Prepare Test Images
     test,test_depth, test_ir = test_all
-    test_img = vt.crop_out(test_depth, crop)
-    test_img = vt.clean_image(test_img)
+    test_img2 = vt.crop_out(test_depth, crop)
+    test_img = vt.clean_image(test_img2)
+    
+    if show:
+        plt.figure()
+        plt.imshow(test_depth)
+        plt.show()
 
     normclean = vt.create_normalised_image(test_img, empt_img, cali_img)
     if show:
@@ -167,21 +181,24 @@ def run_image_processing_v2_depth(test_all, depth_cal, show=True):
     new_cnts, new_h = kv.extract_depth_contours(cnts, hierarchy, 
                                                 normclean*255, 
                                                 minsize=200,
-                                                show=False)
-    family = kv.create_family(new_cnts, new_h)
-    sorted_family = kv.sort_family(family, normclean, show=False, debug=False)
+                                                show=True)
+    if len(new_cnts)>0:
+        family = kv.create_family(new_cnts, new_h)
+        sorted_family = kv.sort_family(family, normclean, show=False, debug=False)
 
-    if show:
-        plt.figure("OBJECT SEGMENTATION")
-        mask = np.zeros_like(normclean)
-        for member in sorted_family:
-            if member['generation']==0:
-                obj_mask = vt.create_contour_mask([member['contour'][0]], normclean)
-                mask = mask + obj_mask
+        if show:
+            plt.figure("OBJECT SEGMENTATION")
+            mask = np.zeros_like(normclean)
+            for member in sorted_family:
+                if member['generation']==0:
+                    obj_mask = vt.create_contour_mask([member['contour'][0]], normclean)
+                    mask = mask + obj_mask
 
-        plt.imshow(mask)
-        plt.show()
-    print "Depth Done"
+            plt.imshow(mask)
+            plt.show()
+        print "Depth Done"
+    else:
+        sorted_family = None
     
     return normclean, sorted_family
 

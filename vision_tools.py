@@ -2,7 +2,7 @@ from scipy.spatial import distance as dist
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
-import imutils
+#import imutils
 import copy
 
 CAMERA=0
@@ -249,7 +249,6 @@ def create_normalised_image(image, emp_image, cal_image=None):
     img = copy.copy(image)
     emp_img = copy.copy(emp_image)
     
-    
     img = convert2gray(img, 'float32')
     emp_img = convert2gray(emp_img, 'float32')
 
@@ -259,6 +258,8 @@ def create_normalised_image(image, emp_image, cal_image=None):
     table_rows = np.append(table_rows, -(table_rows+1))
 
     black,white = min([np.mean(clean_img[i]) for i in table_rows]), clean_img.max()
+    
+    
     
     #Only calls this for Depth data
     if cal_image is not None:
@@ -299,6 +300,7 @@ def resize_image(image, scale=1, shape=None):
     img = cv2.resize(img, (0,0), fx=scale, fy=scale)
     if shape is not None:
         #print "hello"
+        print shape
         img = cv2.resize(img, shape)
     return img
 
