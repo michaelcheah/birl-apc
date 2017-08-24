@@ -20,7 +20,7 @@ import interface_cmds as ic
 import object_grasping as og
 import ur_waypoints as uw
 import demos
-#import vision_copy as vc
+import vision_copy as vc
 import naughts_and_crosses_demo as nc
 import led_functions as lf
 
@@ -270,8 +270,8 @@ def main():
             #plt.show()
             cv2.imwrite("test_rgb_img_centre.jpg", test_rgb_img)
             
-            p1, inverse = pix3world_cal(cali_circles[0],cali_circles[2], cali_circles[1])
-            x,y = pix3world(p1, inverse, p)
+            p1, inverse = vc.pix3world_cal(cali_circles[0],cali_circles[2], cali_circles[1])
+            x,y = vc.pix3world(p1, inverse, p)
             x = x[0,0]
             y = y[0,0]
             print x,y
@@ -284,29 +284,29 @@ def main():
             if ipt==1: #cd
                 clr[1]=[255,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x+35,y,1,z=30)
+                msg = og.vac_stow(c,ser_ee,ser_vac,x+35,y,1,z=40)
                 #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
             if ipt==2: #book
                 clr[4][0]=[255,0,0]
                 clr[5][0]=[255,0,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=40)
+                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=50)
                 #msg = og.vac_pick(c,ser_ee,ser_vac,-500,100,2)
             if ipt==3: #erasor
                 clr[4][0]=[0,0,255]
                 clr[5][0]=[0,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=60)
+                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=80)
                 #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
             if ipt==4: #tape_measure
                 clr[1]=[0,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,1,z=70)
+                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,1,z=90)
                 #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
             if ipt==5: #box
                 clr[0]=[255,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,0,z=100)
+                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,0,z=110)
                 #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
             elif ipt==6: #mug
                 msg = og.grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
