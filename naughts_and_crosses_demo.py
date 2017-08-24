@@ -8,13 +8,12 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds import *
-from object_grasping import *
-from ur_waypoints import *
-from vision_copy import *
+import interface_cmds as ic
+import ur_waypoints as uw
+import vision_copy as vc
 
 def naughts_crosses(c,ser_ee,ser_vac,start=0):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
     z_height = z_cal(c,ser_ee,ser_vac)
 
@@ -39,17 +38,17 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
         print grid_state[3:6]
         print grid_state[6:9]
 
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+        msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
 
     grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]-10,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
     
     while min(grid_state) == 0:
         # Wait for player move
@@ -75,7 +74,7 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
         print grid_state[0:3]
         print grid_state[3:6]
         print grid_state[6:9]
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+        msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
         time.sleep(0.2)
         grid_ref = get_grid_im("grid_ref.jpg",top_left,bottom_right)
         # Check game state
@@ -85,12 +84,12 @@ def naughts_crosses(c,ser_ee,ser_vac,start=0):
         if win==2: 
             return "fleshbag victory"
 
-        current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+        current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2]-10,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-        msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+        msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-        msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+        msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     return ".....................Draw....................."
 
@@ -141,7 +140,7 @@ def get_nc_state(empty_grid,ref_image,top_left,bottom_right, grid):
 
 def get_grid_im(name,top_left,bottom_right):
     #plt.figure(1)
-    capture_pic(name)
+    vc.capture_pic(name)
     #plt.show()
     image = cv2.imread(name)
     
@@ -169,10 +168,10 @@ def get_grid_im(name,top_left,bottom_right):
 
 def cal_grid_im(name):
     #plt.figure(1)
-    capture_pic(name)
+    vc.capture_pic(name)
     #plt.show()
     image = cv2.imread(name)
-    cntrs, points = extract_contours(image)
+    cntrs, points = vc.extract_contours(image)
     plt.figure(1)
     plt.imshow(image)
     plt.show(1)
@@ -181,7 +180,7 @@ def cal_grid_im(name):
     #plt.figure()
     #plt.imshow(empty)
     #plt.show()
-    boxes = find_box(points,minsize=7000,maxsize=9500,squareness=1.3,fill=0.90)
+    boxes = vc.find_box(points,minsize=7000,maxsize=9500,squareness=1.3,fill=0.90)
 
     #print boxes
 
@@ -237,21 +236,21 @@ def read_grid(empty_grid_im,grid_image,grid):
     return grid_state
 
 def z_cal(c,ser_ee,ser_vac):
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    object_height = 1000.0*float(safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
+    object_height = 1000.0*float(ic.safe_ur_move_only(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
     
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
     return object_height+6
 
 def nc_robot_move(c,ser_ee,ser_vac,square,z):
     #pick square
-    msg = socket_send(c,sCMD=102)
+    msg = ic.socket_send(c,sCMD=102)
     X_CENTRE = 50.0
     Y_CENTRE = -405.0
     GRID_WIDTH = 50
@@ -284,11 +283,11 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
     #inp = raw_input("Continue?")
 
     # Move to drawing waypoint
-    msg = safe_ur_move_only(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move_only(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
 
     # Axis rotation matricies for grasping position, rotate around x-axis by aoa, then z-axis by ori
     #x_rot = np.matrix([[ 1.0, 0.0, 0.0],
@@ -310,7 +309,7 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
         #inp = raw_input("Continue?")
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
+        msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
     '''
     for i in range(0,4):
         z_rot = np.matrix([[ math.cos(-math.pi/2), -math.sin(-math.pi/2), 0.0],
@@ -331,10 +330,10 @@ def nc_robot_move(c,ser_ee,ser_vac,square,z):
 
         # Rotate around tool centre point defined by tcp_2
         demand_Pose = {"x":x,"y":y,"z":z,"rx":rx,"ry":ry,"rz":rz}
-        msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
+        msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=1.5,CMD=8)
 
-    msg = socket_send(c,sCMD=100)
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.socket_send(c,sCMD=100)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
 def nc_pick_move(grid_state):
     new_grid = dict(grid_state)
@@ -404,9 +403,9 @@ def nc_finish(grid_state):
     return win
 
 def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
     dx=0
     dz=0
     board_offset=-160
@@ -421,63 +420,63 @@ def update_tally(c,ser_ee,ser_vac,win=0,loss=0,draw=0):
         dz=(draw-1)/5
         dx=draw%5
         board_offset=-30
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0]+board_offset+15*dx,"y":current_Pose[1],"z":current_Pose[2]-60*dz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
     demand_Pose["y"]=current_Pose[1]+20
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
     if dx==0:
         demand_Pose["x"]=current_Pose[0]+board_offset+15*5
     demand_Pose["z"]=current_Pose[2]-60*dz-40
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
 
     demand_Pose["y"]=current_Pose[1]
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=4)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(tally_home_joints),CMD=2)
 
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
 def clean_board(c,ser_ee,ser_vac):
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    object_height = 1000.0*float(safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
+    object_height = 1000.0*float(ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=5))
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     demand_Grip = {"act": 30, "servo": 80, "tilt": 0, "vac": 'r'}
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     demand_Grip["servo"]=0
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     
     # Adjust actuator position
     demand_Grip["act"]=40
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     '''
     # Open grabber servo
     demand_Grip["servo"]=80
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     
     # Close grabber servo
     demand_Grip["servo"]=0
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     time.sleep(0.2)
     '''
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":40,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Grip["act"]=40
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Rotate around y axis by orientation
     # Convert to radians
@@ -519,61 +518,61 @@ def clean_board(c,ser_ee,ser_vac):
     print rx, ry, rz
 
     # Rotate around tool centre point defined by tcp_2
-    socket_send(c,sCMD=101)
+    ic.socket_send(c,sCMD=101)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),CMD=8)
 
-    socket_send(c,sCMD=102)
+    ic.socket_send(c,sCMD=102)
 
     # Clean board
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0]+100,"y":current_Pose[1]-50,"z":50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Pose["z"]=object_height+10
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
 
     demand_Pose["x"]=current_Pose[0]+250
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+100
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["y"]=current_Pose[1]+50
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+250
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["x"]=current_Pose[0]+100
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=8)
 
     demand_Pose["z"]=50
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=dict(demand_Pose), CMD=4)
     
     # Return erasor
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),CMD=2)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),CMD=2)
 
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":30,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=4)
 
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":object_height+2,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=8)
+    msg = ic.safe_ur_move(c, ser_ee, ser_vac, Pose=demand_Pose, CMD=8)
 
     demand_Grip["act"]=30
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     demand_Grip["act"]=30
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
     # Open grabber servo
     demand_Grip["servo"]=80
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     time.sleep(0.2)
 
     # Adjust actuator position
     demand_Grip["act"]=80
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.naughts_crosses_cam_joints),Grip=demand_Grip,CMD=2)

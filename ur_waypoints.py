@@ -99,3 +99,5 @@ def initialize_waypoints():
     naughts_crosses_neutral_joints = {"x": 0, "y": -103.36, "z": 116.19, "rx": -104.60, "ry": -89.11, "rz": -71.30}
     tally_home_joints = {"x": 150.77, "y": -82.00, "z": 78.07, "rx": 4.59, "ry": -28.44, "rz": -225.04}
 '''
+
+empty_led = [[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]

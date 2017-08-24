@@ -8,14 +8,14 @@ import copy
 import numpy as np
 import math
 
-from interface_cmds import *
-from object_grasping import *
-from ur_waypoints import *
-from vision_copy import *
+import interface_cmds as ic
+import object_grasping as og
+import ur_waypoints as uw
+import vision_copy as vc
 
 def smooth_rotate(c,ser_ee,ser_vac,orientation=0,angle_of_attack=0):
     # Select tcp_2, for rotations around the grasping point
-    socket_send(c,sCMD=101)
+    ic.socket_send(c,sCMD=101)
 
     # Convert to radians
     angle_of_attack=angle_of_attack*math.pi/180.0
@@ -56,25 +56,25 @@ def smooth_rotate(c,ser_ee,ser_vac,orientation=0,angle_of_attack=0):
     print rx, ry, rz
 
     # Rotate around tool centre point defined by tcp_2
-    current_Pose, current_Grip = get_position(c,ser_ee,ser_vac,CMD=1)
+    current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":rx,"ry":ry,"rz":rz}
-    msg = safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=0.15,CMD=8)
+    msg = ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=0.15,CMD=8)
 
 def throwing_demo(c,ser_ee,ser_vac):
-    demand_Grip = dict(end_effector_home)
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    demand_Grip = dict(uw.end_effector_home)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
     inp = raw_input("Continue?")
     time.sleep(3)
     demand_Grip["act"]=75
     demand_Grip["servo"]=0
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
     time.sleep(3)
     demand_Grip["servo"]=80
     try:
         # Send formatted CMD
-        c.send("("+str(throwing_demo_joints2["x"])+","+str(throwing_demo_joints2["y"])+","+str(throwing_demo_joints2["z"])+","+str(throwing_demo_joints2["rx"])+","+str(throwing_demo_joints2["ry"])+","+str(throwing_demo_joints2["rz"])+","+str(9)+","+str(0)+")");
+        c.send("("+str(uw.throwing_demo_joints2["x"])+","+str(uw.throwing_demo_joints2["y"])+","+str(uw.throwing_demo_joints2["z"])+","+str(uw.throwing_demo_joints2["rx"])+","+str(uw.throwing_demo_joints2["ry"])+","+str(uw.throwing_demo_joints2["rz"])+","+str(9)+","+str(0)+")");
     except socket.error as socketerror:
         print ".......................Some kind of error :(......................."
 
@@ -97,7 +97,7 @@ def throwing_demo(c,ser_ee,ser_vac):
     except socket.error as socketerror:
         print ".......................Some kind of error :(......................."
 
-    msg = safe_move(c,ser_ee,ser_vac,Pose=dict(throwing_demo_joints1),Grip=demand_Grip,CMD=2)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.throwing_demo_joints1),Grip=demand_Grip,CMD=2)
 
 def cal_test(p):
     #p1, inverse = pix3world_cal([225.0,649.0],[741.0,1209.0],[264.0,1237.0])

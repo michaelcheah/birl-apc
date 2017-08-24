@@ -6,7 +6,7 @@ import time
 import math
 import copy
 
-from ur_waypoints import grab_home, grab_home_joints, end_effector_home, shelf_home_joints, shelf_joints_waypoint, shelf_joints, shelf_pos, cam1_joints, grabbing_joints_waypoint
+import ur_waypoints as uw
 
 # Socket CMDs
 # Send (Pose, Command, Variable) to the UR5 using the socket connection c
@@ -25,7 +25,7 @@ from ur_waypoints import grab_home, grab_home_joints, end_effector_home, shelf_h
 #
 # 100 - set tool centre point to tcp_1 (only z offset from end), Variable = n.a., UR returns string "tool_1_selected"
 # 101 - set tool centre point to tcp_2 (centre used for vector rotations), Variable = n.a., UR returns string "tool_2_selected"
-def socket_send(c, sPose=dict(grab_home), sSpeed = 0.75, sCMD = 0):
+def socket_send(c, sPose=dict(uw.grab_home), sSpeed = 0.75, sCMD = 0):
     sendPose = dict(sPose)
     msg = "Failed"
     try:
@@ -88,7 +88,7 @@ def led_serial_send(ser_led,id,cluster,r,g,b):
 # Safe Move CMDs
 # Send socket and serial CMDs
 # Returns reply from UR
-def safe_move(c,ser_ee,ser_vac,Pose=dict(grab_home),Speed=0.75,Grip=dict(end_effector_home),CMD=4):
+def safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home),Speed=0.75,Grip=dict(uw.end_effector_home),CMD=4):
     # Socket CMDs
     print "Sending ur move"
     msg = safe_ur_move(c,dict(Pose),CMD,Speed=Speed)
@@ -162,7 +162,7 @@ def safe_ur_move(c,Pose,CMD,Speed=0.75):
 # Query CMDs
 # Send socket and serial CMDs
 # Returns decoded replies: [current robot position], [actuator angle, servo pos, tilt pos, switch state, vac state]
-def get_position(c,ser_ee,ser_vac,Pose=dict(grab_home),Speed=0.75,CMD=1):
+def get_position(c,ser_ee,ser_vac,Pose=dict(uw.grab_home),Speed=0.75,CMD=1):
     # Socket CMDs
     current_position = get_ur_position(c,CMD,dict(Pose),Speed)
 
@@ -174,7 +174,7 @@ def get_position(c,ser_ee,ser_vac,Pose=dict(grab_home),Speed=0.75,CMD=1):
 #
 #
 #
-def get_ur_position(c,CMD,gPose=dict(grab_home),gSpeed=0.75):
+def get_ur_position(c,CMD,gPose=dict(uw.grab_home),gSpeed=0.75):
     # Initialize variables
     sendPose = dict(gPose)
     msg = "0"
@@ -257,7 +257,7 @@ def get_ee_position(ser_ee,ser_vac):
 # Send socket CMD=6
 # Unused as force now sent as a vector and decoded by get_position()
 def get_force(c):
-    msg = socket_send(c, sPose=dict(grab_home), sCMD=6)
+    msg = socket_send(c, sPose=dict(uw.grab_home), sCMD=6)
     #print "force: ", msg
     return msg
 
@@ -265,7 +265,7 @@ def get_force(c):
 # Send socket CMD=7
 # Unused as torque now sent as a vector and decoded by get_position()
 def get_torque(c):
-    msg = socket_send(c, sPose=dict(grab_home), sCMD=7)
+    msg = socket_send(c, sPose=dict(uw.grab_home), sCMD=7)
     #print "torque: ", msg
     return msg
 
