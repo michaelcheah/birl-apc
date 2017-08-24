@@ -9,11 +9,12 @@ import copy
 
 import interface_cmds as ic
 import ur_waypoints as uw
+import led_functions as lf
 
 # Vacuumable object stowing strategy
 # Depends on: x, y of object on table and desired shelf to deposit object
 # Returns string
-def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
+def vac_stow(c,ser_ee,ser_vac,ser_led,x,y,shelf,z=110,yoff=0):
     # Set tool to tcp_5
     ic.socket_send(c,sCMD=104)
     
@@ -39,13 +40,21 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
 
     # Move to above the object
     current_Pose = ic.get_ur_position(c,1)
-    demand_Pose = {"x":x,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":x,"y":y,"z":110,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    demand_Pose["z"]=z
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    clr = copy.deepcopy(uw.empty_led)
+    clr[4]=[255,0,0]
+    clr[5]=[255,0,0]
+    lf.illuminate_cluster(ser_led,2,colour=clr)
 
     # Move down until oject is reached
     demand_Pose = {"x":x,"y":y,"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
-    object_height = 1000.0*float(ic.safe_ur_move(c,Pose=dict(demand_Pose),Speed=0.05,CMD=5))-15
+    object_height = 1000.0*float(ic.safe_ur_move(c,Pose=dict(demand_Pose),Speed=0.05,CMD=5))-22.0
     print "object_height: ", object_height
 
     time.sleep(0.5)
@@ -83,9 +92,6 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
         shelf_depth = 650
         print "Object too tall"
 
-    yoff = 0.0
-    if shelf == 4:
-        yoff = -100.0
     # Raise end to object_height above the shelf
     current_Pose = ic.get_ur_position(c,1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -93,13 +99,23 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
 
     # Move to back of shelf
     demand_Pose = {"x":shelf_depth,"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=8)
+
+    time.sleep(0.5)
 
     # Release vacuum at current position
     demand_Grip["vac"]="r"
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
-    time.sleep(2)
+    clr = copy.deepcopy(uw.empty_led)
+    lf.illuminate_cluster(ser_led,2,colour=clr)
+
+    time.sleep(1.2)
+
+    pick_Pose = ic.get_ur_position(c,1)
+    x = pick_Pose[0]
+    y = pick_Pose[1]
+    z = pick_Pose[2]
 
     # Exit shelf
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -114,22 +130,24 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
     # Return home
     msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),CMD=2)
     print "object_height: ", object_height
-    return "Shelf "+ str(shelf) + " completed"
+    return "Shelf "+ str(shelf) + " completed",x,y,z
 
 # Flat object picking strategy
 # Depends on: y,z of object on shelf and nth object for safe placement
 # Returns string
-def vac_pick(c,ser_ee,ser_vac,y,z,n):
+def vac_pick(c,ser_ee,ser_vac,ser_led,y,z,n,x=816.3):
     # Determine closest shelf
     shelf = 0
     if z < 247:
         z = 151.3
+        z = 148.0
         if y < -215:
             shelf = 4
         else:
             shelf = 3
     else:
         z = 359.7
+        z = 356.0
         if y < -445:
             shelf = 2
         elif y < -215:
@@ -159,7 +177,7 @@ def vac_pick(c,ser_ee,ser_vac,y,z,n):
     # Home
     demand_Pose = dict(uw.grab_home)
     demand_Grip = dict(uw.end_effector_home)
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_home_joints),Grip=demand_Grip,CMD=2)
+    #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_home_joints),Grip=demand_Grip,CMD=2)
 
     # Move to shelves
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
@@ -175,11 +193,16 @@ def vac_pick(c,ser_ee,ser_vac,y,z,n):
 
     # Move above object
     current_Pose = ic.get_ur_position(c,1)
-    demand_Pose = {"x":816.3,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":x,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=8)
 
+    clr = copy.deepcopy(uw.empty_led)
+    clr[4]=[255,0,0]
+    clr[5]=[255,0,0]
+    lf.illuminate_cluster(ser_led,2,colour=clr)
+
     # Move down until object is reached
-    demand_Pose = {"x":816.3,"y":y,"z":z-50,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":x,"y":y,"z":z-75,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
     object_height = 1000.0*float(ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=0.05,Grip=demand_Grip,CMD=5))
     print "object_height: ", object_height
@@ -192,7 +215,7 @@ def vac_pick(c,ser_ee,ser_vac,y,z,n):
 
     time.sleep(2)
     # Lift object
-    demand_Pose = {"x":816.3,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose["z"]=z
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Speed=0.25,Grip=demand_Grip,CMD=4)
 
     # Exit shelf
@@ -215,9 +238,14 @@ def vac_pick(c,ser_ee,ser_vac,y,z,n):
     demand_Grip["vac"]="r"
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
-    time.sleep(2)
+    clr = copy.deepcopy(uw.empty_led)
+    lf.illuminate_cluster(ser_led,2,colour=clr)
+
+    time.sleep(1.2)
     # Return home
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_home_joints),Grip=demand_Grip,CMD=2)
+    #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_home_joints),Grip=demand_Grip,CMD=2)
+    # Return home
+    msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),CMD=2)
 
     return "Completed pick from shelf "+ str(shelf)
 
