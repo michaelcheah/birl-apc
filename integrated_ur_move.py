@@ -42,7 +42,8 @@ def initialize():
     HOST = "169.254.242.158"
     PORT = 30000 # The same port as used by the server
 
-    print "Starting Program"
+    print ".......................Starting Program......................."
+    print ""
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -51,16 +52,16 @@ def initialize():
     c, addr = s.accept() # Establish connection with client.
 
     print "Connected to UR"
+    print ""
    
     ser_ee = serial.Serial('/dev/ttyACM0',9600)  # open serial port
     ser_vac = serial.Serial('/dev/ttyACM1',9600)  # open serial port
     ser_led = serial.Serial('/dev/ttyACM2',9600)  # open serial port
     while ser_ee.isOpen()==False & ser_vac.isOpen()==False & ser_led.isOpen()==False:
         print "Waiting for serial"
-    print(ser_ee.name)         # check which port was really used
-    print(ser_vac.name)         # check which port was really used
-    print(ser_led.name)         # check which port was really used
-    time.sleep(2)
+    print ser_ee.name, ": ",ser_ee.readline()         # check which port was really used
+    print ser_vac.name, ": ",ser_vac.readline()             # check which port was really used
+    print ser_led.name, ": ",ser_led.readline()             # check which port was really used
     print "Ready"
 
     return c, ser_ee, ser_vac, ser_led
@@ -235,8 +236,8 @@ def main():
                         if pick_obj.rgb_aspect < 0.6:
                             ipt = 3
                             print "Object is eraser"
-                            x_pix = pick_obj.centre[0]
-                            y_pix = pick_obj.centre[1]
+                            x_pix = pick_obj.rgb_centre[0]
+                            y_pix = pick_obj.rgb_centre[1]
                         else:
                             ipt = 2
                             print "Object is book"
@@ -282,32 +283,31 @@ def main():
             #x = float(raw_input("x :"))
             #y = float(raw_input("y :"))
             if ipt==1: #cd
-                clr[1]=[255,255,0]
+                clr[0]=[255,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x+35,y,1,z=40)
-                #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x+35,y,0,z=50)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             if ipt==2: #book
-                clr[4][0]=[255,0,0]
-                clr[5][0]=[255,0,0]
+                clr[4]=[255,0,0]
+                clr[5]=[255,0,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=50)
-                #msg = og.vac_pick(c,ser_ee,ser_vac,-500,100,2)
+                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,4,z=60,yoff=-100)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             if ipt==3: #erasor
-                clr[4][0]=[0,0,255]
-                clr[5][0]=[0,0,255]
+                clr[1]=[0,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,4,z=80)
-                #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,1,z=80,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             if ipt==4: #tape_measure
-                clr[1]=[0,255,0]
+                clr[2]=[0,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,1,z=90)
-                #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,2,z=90,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             if ipt==5: #box
-                clr[0]=[255,0,255]
+                clr[3]=[255,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg = og.vac_stow(c,ser_ee,ser_vac,x,y,0,z=110)
-                #msg = og.vac_pick(c,ser_ee,ser_vac,-100,300,2)
+                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,3,z=110,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             elif ipt==6: #mug
                 msg = og.grab_stow(c,ser_ee,ser_vac,-200,-400,z=20,angle_of_attack=89.9,shelf=1,size=6)
                 msg = og.grab_pick(c,ser_ee,ser_vac,-320,z=300,orientation=0,object_height=48)
@@ -382,7 +382,7 @@ def main():
             nc_loss = int(raw_input("human wins: "))
             while True:
                 st = int(raw_input("Robot/Human starts (0/1): "))
-                game = naughts_crosses(c,ser_ee,ser_vac,start=st)
+                game = nc.naughts_crosses(c,ser_ee,ser_vac,start=st)
                 print game
                 for i in range(0,5):
                     current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
@@ -401,7 +401,7 @@ def main():
                     nc_draw = nc_draw+1
                     nc.update_tally(c,ser_ee,ser_vac,draw=nc_draw)
         if task == "cam":
-            check_camera()
+            vc.check_camera()
         if task == "grab_pick":
             #shelf = int(raw_input("shelf: "))
             #ori = float(raw_input("ori: "))
@@ -410,7 +410,7 @@ def main():
             height = int(raw_input("height: "))
             print og.grab_pick(c,ser_ee,ser_vac,y,z=Z,orientation=0,object_height=height)
         if task == "demo":
-            demand_Grip = dict(end_effector_home)
+            demand_Grip = dict(uw.end_effector_home)
             while True:
                 msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),Grip=demand_Grip,CMD=2)
                 demand_Grip["tilt"] = 1
@@ -450,9 +450,9 @@ def main():
         if task == "home":
             msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),CMD=2)
         if task == "force":
-            print get_force(c)
+            print ic.get_force(c)
         if task == "torque":
-            print get_torque(c)
+            print ic.get_torque(c)
         if task == "pose":
             current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
             print "current pose: ", current_Pose

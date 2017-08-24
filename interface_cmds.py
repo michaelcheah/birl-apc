@@ -74,11 +74,10 @@ def led_serial_send(ser_led,id,cluster,r,g,b):
     ser_led.flushOutput()
     # Set vacuum state, release = "r", grab = "g"
     ser_led.write(id + chr(cluster) + chr(r) + chr(g) + chr(b) + "\n")
-    print b
     # Wait for led arduino to finish
     while True:
         ipt = ser_led.readline()
-        print ipt
+        #print ipt
         if ipt == "error\r\n":
             ser_led.write(id + chr(cluster) + chr(r) + chr(g) + chr(b) + "\n")
         if ipt == "done\r\n":
@@ -105,9 +104,9 @@ def end_effector_move(ser_ee,ser_vac,Grip):
     # Serial CMDs
     serial_send(ser_ee,ser_vac,"A",Grip["act"])
     ipt = ser_ee.readline()
-    print "sw state = ",ipt
+    #print "sw state = ",ipt
     ipt = ser_ee.readline()
-    print "Timeout = ",ipt
+    #print "Timeout = ",ipt
 
     serial_send(ser_ee,ser_vac,"G",Grip["servo"])
 
@@ -181,7 +180,7 @@ def get_ur_position(c,CMD,gPose=dict(uw.grab_home),gSpeed=0.75):
 
     # Socket CMDs
     msg = socket_send(c, sPose=sendPose, sSpeed=gSpeed, sCMD=CMD)
-    print "recieved: ",msg
+    #print "recieved: ",msg
 
     # Decode Pose or Joints from UR
     current_position = [0,0,0,0,0,0]
@@ -213,7 +212,7 @@ def get_ur_position(c,CMD,gPose=dict(uw.grab_home),gSpeed=0.75):
         if CMD==3: current_position[x] = current_position[x]*180.0/math.pi
         current_position[x+3] = current_position[x+3]*180.0/math.pi
 
-    print "decoded msg: ",current_position
+    #print "decoded msg: ",current_position
     return current_position
 
 #
