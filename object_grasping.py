@@ -45,7 +45,7 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
     # Move down until oject is reached
     demand_Pose = {"x":x,"y":y,"z":0,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
-    object_height = 1000.0*float(ic.safe_ur_move(c,Pose=dict(demand_Pose),Speed=0.05,CMD=5))
+    object_height = 1000.0*float(ic.safe_ur_move(c,Pose=dict(demand_Pose),Speed=0.05,CMD=5))-15
     print "object_height: ", object_height
 
     time.sleep(0.5)
@@ -112,7 +112,7 @@ def vac_stow(c,ser_ee,ser_vac,x,y,shelf,z=110):
     #msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
 
     # Return home
-    msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),Grip=demand_Grip,CMD=2)
+    msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),CMD=2)
     print "object_height: ", object_height
     return "Shelf "+ str(shelf) + " completed"
 

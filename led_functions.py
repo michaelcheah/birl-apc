@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import serial
+import copy
 
 import interface_cmds as ic
 import ur_waypoints as uw
