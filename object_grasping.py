@@ -251,7 +251,7 @@ def vac_pick(c,ser_ee,ser_vac,ser_led,y,z,n,x=816.3):
 
 # Grabable object stowing strategy
 # Depends on: grasping co-ordiantes of object, and desired shelf to deposit object
-def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,shelf=0,size=40,xoff=0,zoff=0):
+def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,shelf=0,size=40,xoff=0,zoff=0,obj=6):
     # Select tcp_2, for rotations around the grasping point
     ic.socket_send(c,sCMD=103)
 
@@ -435,34 +435,57 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
     msg = ic.safe_ur_move(c,Pose=dict(demand_Joints), CMD=2)
 
-    # Move safely towards shelf
-    demand_Joints = dict(uw.shelf_joints_waypoint)
-    demand_Joints["rz"] = demand_Joints["rz"]-90
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Joints),CMD=2)
+    if obj==6 or obj==8 or obj==9:
+        # Move safely towards shelf
+        demand_Joints = dict(uw.shelf_joints_waypoint)
+        demand_Joints["rz"] = demand_Joints["rz"]-90
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Joints),CMD=2)
 
-    # Move safely towards shelf
-    demand_Joints = dict(uw.shelf_joints[shelf])
-    demand_Joints["rz"] = demand_Joints["rz"]-90
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Joints),CMD=2)
+        # Move safely towards shelf
+        demand_Joints = dict(uw.shelf_joints[shelf])
+        demand_Joints["rz"] = demand_Joints["rz"]-90
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Joints),CMD=2)
 
-    # Define position on shelf
-    object_height = 50
-    zoffset = 3*(shelf%3)-4+zoff
-    shelf_depth = 766-10*(shelf%3)
-    yoff = 35
+        # Define position on shelf
+        object_height = 50
+        zoffset = 3*(shelf%3)-4+zoff
+        shelf_depth = 766-10*(shelf%3)
+        yoff = 35
     
-    # Align object with shelf
-    current_Pose = ic.get_ur_position(c,1)
-    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+zoffset,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+        # Align object with shelf
+        current_Pose = ic.get_ur_position(c,1)
+        demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+zoffset,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
-    # Move into shelf
-    demand_Pose["x"]=shelf_depth+xoff
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+        # Move into shelf
+        demand_Pose["x"]=shelf_depth+xoff
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
-    # Move into shelf
-    demand_Pose["z"]=current_Pose[2]+object_height-15+zoffset
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+        # Move into shelf
+        demand_Pose["z"]=current_Pose[2]+object_height-15+zoffset
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+    elif obj==7 or obj ==10:
+        # Move safely towards shelf
+        msg = ic.safe_ur_move(c,Pose=dict(shelf_grab_joints[shelf]),CMD=2)
+
+        # Define position on shelf
+        object_height = 50
+        zoffset = 3*(shelf%3)-4+zoff
+        shelf_depth = 766-10*(shelf%3)
+        yoff = 35
+    
+        # Align object with shelf
+        current_Pose = ic.get_ur_position(c,1)
+        demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+zoffset,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+
+        # Move into shelf
+        demand_Pose["x"]=shelf_depth+xoff
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+
+        # Move into shelf
+        demand_Pose["z"]=current_Pose[2]+object_height-15+zoffset
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
     # Release object
     #demand_Grip["servo"]=10
@@ -504,16 +527,16 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
 
     # Return home
     msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
+    
+    # Reset tool to tcp_1
+    ic.socket_send(c,sCMD=100)
 
     # Return home
     msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),CMD=2)
-
-    # Reset tool to tcp_1
-    ic.socket_send(c,sCMD=100)
     
     return "Shelf "+ str(shelf) + " completed",x,y,z
 
-def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,size=70,xoff=0,zoff=0,n=0):
+def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,size=70,xoff=0,zoff=0,n=0,obj=6):
     # curved object picking strategy
     #ic.socket_send(c,sCMD=101)
 
@@ -560,16 +583,27 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
     print "Sending actuator move"
     ser_ee.write("A" + chr(demand_Grip["act"]) + "\n")
 
-    # Move to shelf
-    msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints[shelf]),CMD=2)
+    if obj==6 or obj==8 or obj==9:
+        # Move to shelf
+        msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints[shelf]),CMD=2)
 
-    # Align with object
-    current_Pose = ic.get_ur_position(c,1)
-    zoffset=3*(shelf%3)-4+zoff
-    demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height+zoffset+5,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
-    msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+        # Align with object
+        current_Pose = ic.get_ur_position(c,1)
+        zoffset=3*(shelf%3)-4+zoff
+        demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height+zoffset+5,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+    elif obj==7 or obj==10:
+        # Reset tool to tcp_1
+        ic.socket_send(c,sCMD=101)
 
-    #ipt = raw_input("Continue?")
+        # Move to shelf
+        msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_grab_joints[shelf]),CMD=2)
+
+        # Align with object
+        current_Pose = ic.get_ur_position(c,1)
+        zoffset=3*(shelf%3)-4+zoff
+        demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height+zoffset+5,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+        msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
     # Wait for end effector to finish adjustment
     while True:
@@ -634,6 +668,9 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
     time.sleep(0.2)
     demand_Pose["z"]=current_Pose[2]+50
     msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+
+    # Reset tool to tcp_1
+    ic.socket_send(c,sCMD=100)
 
     # Return home
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),Grip=demand_Grip,CMD=2)
