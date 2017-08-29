@@ -76,7 +76,7 @@ def first_grasping_point(table_object):
     
     dist1, first_neighbour1 = pnt2line(table_object.centre, first_node1, first_neighbours[0][0])
     
-    if len(first_neighbours)>0:
+    if len(first_neighbours)>1:
         dist2, first_neighbour2 = pnt2line(table_object.centre, first_node1, first_neighbours[1][0])
     
         if dist1<dist2:
