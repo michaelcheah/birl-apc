@@ -516,8 +516,9 @@ def main():
             print og.vac_pick(c, ser_ee, ser_vac, y, z, shelf)
         if task == "shelf":
             shelf = int(raw_input("shelf: "))
-            #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
-            print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints[shelf]),CMD=2)
+            #print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),CMD=2)
+            print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_grab_joints_waypoint),CMD=2)
+            #print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_grab_joints[shelf]),CMD=2)
             #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
             #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(shelf_home_joints),CMD=2)
         if task == "shelf_home":
