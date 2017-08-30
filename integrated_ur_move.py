@@ -370,7 +370,7 @@ def main():
                 clr[1]=[0,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
                 msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,1,z=80,yoff=-21)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==4: #tape_measure
                 clr[2]=[0,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
