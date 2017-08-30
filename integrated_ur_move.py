@@ -358,45 +358,55 @@ def main():
             if ipt==1: #cd
                 clr[0]=[255,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x+35,y,0,z=50)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x+35,y,0,z=50)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==2: #book
                 clr[4]=[255,0,0]
                 clr[5]=[255,0,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,4,z=60,yoff=-100)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,4,z=60,yoff=-100)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==3: #erasor
                 clr[1]=[0,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,1,z=80,yoff=-21)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,1,z=80,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==4: #tape_measure
                 clr[2]=[0,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,2,z=90,yoff=-21)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg,,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,2,z=90,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==5: #box
                 clr[3]=[255,0,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,X,y,z = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,3,z=110,yoff=-21)
-                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
+                msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,3,z=110,yoff=-21)
+                msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             elif ipt==6: #mug
-                Shelf = int(raw_input("shelf: "))
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=Shelf,size=6)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-20,z=Z,orientation=0,object_height=65.0,n=2)
+                clr[0]=[255,64,0]
+                lf.illuminate_cluster(ser_led,1,colour=clr)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=0,size=6)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-20,z=sz,orientation=0,object_height=65.0,n=2)
             elif ipt==7: #torch
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=6,angle_of_attack=89.9,orientation=ori,shelf=1,size=12,xoff=20,zoff=-50,obj=ipt)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-10,z=Z,orientation=0,object_height=17.0,xoff=20,zoff=9,n=2,obj=ipt)
+                clr[1]=[0,255,255]
+                lf.illuminate_cluster(ser_led,1,colour=clr)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=6,angle_of_attack=89.9,orientation=ori,shelf=1,size=12,xoff=0,zoff=0,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sz,z=sz,orientation=0,object_height=19.0,xoff=0,zoff=0,n=2,obj=ipt,stored_x=sx)
             elif ipt==8: #duct_tape
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=15,angle_of_attack=89.9,orientation=ori,shelf=2,size=20)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=0,object_height=48.0,xoff=25,n=2)
+                clr[2]=[64,255,0]
+                lf.illuminate_cluster(ser_led,1,colour=clr)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=15,angle_of_attack=89.9,orientation=ori,shelf=2,size=20)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-32,z=sz,orientation=0,object_height=48.0,xoff=10,n=2)
             elif ipt==9: #banana
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=8,angle_of_attack=89.9,orientation=ori,shelf=3,size=25,xoff=20,zoff=-20)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=0,object_height=33.0,xoff=20,n=2)
+                clr[3]=[64,64,255]
+                lf.illuminate_cluster(ser_led,1,colour=clr)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=8,angle_of_attack=89.9,orientation=ori,shelf=3,size=25,xoff=20,zoff=-30)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-17,z=sz,orientation=0,object_height=33.0,xoff=30,n=2)
             elif ipt==10: #tennis_ball
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=4,size=50,obj=ipt)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=90.0,object_height=65.0,n=2,obj=ipt)
+                clr[4]=[255,0,64]
+                clr[5]=[255,0,64]
+                lf.illuminate_cluster(ser_led,1,colour=clr)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=4,size=50,zoff=-45,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy,z=sz,orientation=0,object_height=65.0,n=2,obj=ipt,stored_x=sx)
             clr = copy.deepcopy(uw.empty_led)
             lf.illuminate_cluster(ser_led,1,colour=clr)
             ic.led_serial_send(ser_led,"I",2,0,2,0)

@@ -17,7 +17,7 @@ import led_functions as lf
 def vac_stow(c,ser_ee,ser_vac,ser_led,x,y,shelf,z=110,yoff=0):
     # Set tool to tcp_5
     ic.socket_send(c,sCMD=104)
-
+    
     # Home
     demand_Pose = dict(uw.grab_home)
     demand_Grip = dict(uw.end_effector_home)
@@ -76,7 +76,7 @@ def vac_stow(c,ser_ee,ser_vac,ser_led,x,y,shelf,z=110,yoff=0):
 
     # Reset tool to tcp_1
     ic.socket_send(c,sCMD=100)
-
+    
     # Move closer to shelves
     msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
 
@@ -225,7 +225,7 @@ def vac_pick(c,ser_ee,ser_vac,ser_led,y,z,n,x=816.3):
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),Grip=demand_Grip,CMD=2)
 
     # Rotate base
-    current_Joints = ic.get_ur_position(c,3)
+    current_Joints = ic.get_ur_position(c,3) 
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Joints),Grip=demand_Grip,CMD=2)
 
@@ -283,7 +283,7 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
     angle_of_attack=angle_of_attack*math.pi/180.0
     orientation=orientation*math.pi/180.0
     thetay=135.0*math.pi/180.0
-
+    
     # Cartesian rotation matrices to match uw.grabbing_joints rotation
     x_rot = np.matrix([[ 1.0, 0.0, 0.0],
              [ 0.0, math.cos(math.pi/2), -math.sin(math.pi/2)],
@@ -451,7 +451,7 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
         zoffset = 3*(shelf%3)-4+zoff
         shelf_depth = 766-10*(shelf%3)
         yoff = 35
-
+    
         # Align object with shelf
         current_Pose = ic.get_ur_position(c,1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+zoffset,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -472,8 +472,8 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
         object_height = 50
         zoffset = 3*(shelf%3)-4+zoff
         shelf_depth = 766-10*(shelf%3)
-        yoff = 35
-
+        yoff = 0
+    
         # Align object with shelf
         current_Pose = ic.get_ur_position(c,1)
         demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+zoffset,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
@@ -527,18 +527,19 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
 
     # Return home
     msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
-
+    
     # Reset tool to tcp_1
     ic.socket_send(c,sCMD=100)
 
     # Return home
     msg = ic.safe_ur_move(c,Pose=dict(uw.grab_home_joints),CMD=2)
-
+    
     return "Shelf "+ str(shelf) + " completed",x,y,z
 
-def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,size=70,xoff=0,zoff=0,n=0,obj=6):
+def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,size=70,xoff=0,zoff=0,n=0,obj=6,stored_x=0):
     # curved object picking strategy
     #ic.socket_send(c,sCMD=101)
+    stored_z=z
 
     shelf = 0
     if z < 247:
@@ -592,6 +593,46 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         zoffset=3*(shelf%3)-4+zoff
         demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height+zoffset+5,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
         msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
+
+        # Wait for end effector to finish adjustment
+        while True:
+            ipt = ser_ee.readline()
+            print ipt
+            if ipt == "done\r\n":
+                break
+        timeout = ser_ee.readline()
+        print "timeout: ", timeout
+        ser_ee.flush
+
+        xoffset=10*(2-shelf%3)+xoff
+        demand_Pose["x"]=current_Pose[0]+185.0+xoffset
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+
+        #ipt = raw_input("Continue?")
+
+        demand_Pose["z"]=current_Pose[2]+object_height+zoffset-20
+        demand_Grip["servo"]=80
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+
+        demand_Pose["x"]=current_Pose[0]+110+xoffset
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+
+        demand_Pose["x"]=current_Pose[0]+113+xoffset
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+
+        demand_Grip["servo"]=0
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+
+        clr = copy.deepcopy(uw.empty_led)
+        clr[3]=[0,0,255]
+        clr[4]=[0,0,255]
+        lf.illuminate_cluster(ser_led,2,colour=clr)
+
+        demand_Pose["x"]=current_Pose[0]-30+xoffset
+        demand_Pose["z"]=current_Pose[2]+object_height+zoffset+5
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
     elif obj==7 or obj==10:
         # Reset tool to tcp_1
         ic.socket_send(c,sCMD=101)
@@ -601,55 +642,57 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
 
         # Align with object
         current_Pose = ic.get_ur_position(c,1)
-        zoffset=3*(shelf%3)-4+zoff
-        demand_Pose = {"x":current_Pose[0],"y":y,"z":current_Pose[2]+object_height+zoffset+5,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+        xoffset=10*(2-shelf%3)+xoff
+        demand_Pose = {"x":current_Pose[0]+xoffset,"y":y,"z":stored_z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
         msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
-    # Wait for end effector to finish adjustment
-    while True:
-        ipt = ser_ee.readline()
-        print ipt
-        if ipt == "done\r\n":
-            break
-    timeout = ser_ee.readline()
-    print "timeout: ", timeout
-    ser_ee.flush
+        # Wait for end effector to finish adjustment
+        while True:
+            ipt = ser_ee.readline()
+            print ipt
+            if ipt == "done\r\n":
+                break
+        timeout = ser_ee.readline()
+        print "timeout: ", timeout
+        ser_ee.flush
 
-    xoffset=10*(2-shelf%3)+xoff
-    demand_Pose["x"]=current_Pose[0]+185.0+xoffset
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+        demand_Grip["act"] = int(80.0-0.6*object_height)-8
+        demand_Pose["x"]=stored_x+10
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.1,CMD=8)
 
-    #ipt = raw_input("Continue?")
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
 
-    demand_Pose["z"]=current_Pose[2]+object_height+zoffset-20
-    demand_Grip["servo"]=80
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
+        for i in range(0,81):
+            #print "Sending end effector move"
+            ser_ee.flush
+            # Set Actuator position, min = 0, max = 80
+            ser_ee.write("G" + chr(80-i) + "\n")
+            # Wait for end effector arduino to finish
+            while True:
+                ipt = ser_ee.readline()
+                #print ipt
+                if ipt == "done\r\n":
+                    break
 
-    demand_Pose["x"]=current_Pose[0]+110+xoffset
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+        demand_Grip["act"] = int(80.0-0.6*object_height)
+        demand_Grip["servo"] = 0
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
 
-    demand_Pose["x"]=current_Pose[0]+113+xoffset
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+        clr = copy.deepcopy(uw.empty_led)
+        clr[3]=[0,0,255]
+        clr[4]=[0,0,255]
+        lf.illuminate_cluster(ser_led,2,colour=clr)
 
-    demand_Grip["servo"]=0
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
-
-    clr = copy.deepcopy(uw.empty_led)
-    clr[3]=[0,0,255]
-    clr[4]=[0,0,255]
-    lf.illuminate_cluster(ser_led,2,colour=clr)
-
-    demand_Pose["x"]=current_Pose[0]-30+xoffset
-    demand_Pose["z"]=current_Pose[2]+object_height+zoffset+5
-    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+        demand_Pose["x"]=current_Pose[0]-30+xoffset
+        demand_Pose["z"]=stored_z+20
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
     # Move away from shelf
     msg = ic.safe_ur_move(c,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
 
     # Rotate base
-    current_Joints = ic.get_ur_position(c,3)
+    current_Joints = ic.get_ur_position(c,3) 
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
     msg = ic.safe_ur_move(c,Pose=dict(demand_Joints),CMD=2)
 
@@ -659,9 +702,18 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
     msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
     # Release object
-    demand_Grip["servo"]=80
+    demand_Grip["servo"]=50
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 
+    # Release object
+    #demand_Grip["servo"]=30
+    #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    time.sleep(0.2)
+    # Release object
+    demand_Grip["servo"]=80
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    
     clr = copy.deepcopy(uw.empty_led)
     lf.illuminate_cluster(ser_led,2,colour=clr)
 
@@ -723,29 +775,38 @@ def fork(c, ser_ee, ser_vac,x,y,rz):
     demand_Pose = dict(uw.grab_home)
     demand_Grip = dict(uw.end_effector_home)
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),Grip=demand_Grip,CMD=2)
+
     current_Joints, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=3)
     demand_Joints = {"x":current_Joints[0]-90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4]+60,"rz":current_Joints[5]-45}
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+
     current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":x,"y":y,"z":100+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+
     demand_Pose = {"x":x,"y":y,"z":25+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     print "sending force_move................................................"
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.05, Grip=demand_Grip, CMD=5)
+
     current_Pose, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=1)
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":current_Pose[2],"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     demand_Grip["vac"]="g"
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Grip=demand_Grip, CMD=4)
+
     time.sleep(2)
     demand_Pose = {"x":x,"y":y,"z":100+rz,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Pose, Speed=0.25, Grip=demand_Grip, CMD=4)
+
     current_Joints, current_Grip = ic.get_position(c,ser_ee,ser_vac,CMD=3)
     demand_Joints = {"x":90,"y":current_Joints[1],"z":current_Joints[2],"rx":current_Joints[3],"ry":current_Joints[4],"rz":current_Joints[5]}
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+
     demand_Grip["vac"]="r"
     msg = ic.safe_move(c, ser_ee, ser_vac, Pose=demand_Joints, Grip=demand_Grip, CMD=2)
+
     time.sleep(4)
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),Grip=demand_Grip,CMD=2)
+
     return
 '''
 
