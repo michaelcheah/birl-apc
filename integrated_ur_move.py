@@ -37,6 +37,8 @@ from object_data_csv import create_object_df, prepare_object_dict, add_to_csv, c
 
 from tableObject_class import TableObject, match_rgb_with_depth, match_rgb_with_depth_v2
 
+import grasping_points as gp
+
 object_ipt_dict = {'cd':      [1,'rgb'],
                    'book':    [2,'rgb'],
                    'eraser':  [3,'rgb'],
@@ -81,10 +83,10 @@ def initialize():
 def main():
     c, ser_ee, ser_vac, ser_led = initialize()
     # loop
-    ic.ic.led_serial_send(ser_led,"I",2,0,2,0)
+    ic.led_serial_send(ser_led,"I",2,0,2,0)
     print c.recv(1024)
     inp = raw_input("Continue?")
-    msg = ic.ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),CMD=2)
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),CMD=2)
     
     ##################### Vision Initialise #####################################
     directory = PATH_TO_KINECT_IMAGES_DIR
@@ -100,6 +102,9 @@ def main():
     
     while True:
         task = raw_input("task: ")
+        
+        if task == "lf":
+            lf.illuminate_cluster(ser_led,4,colour=[[0,0,0],[255,103,23],[0,0,0],[0,0,0],[255,103,23],[0,0,0]])
         
         ################ Calibration Step if needed #######################################
         if task == "calibrate":
@@ -238,7 +243,19 @@ def main():
             cost_list = ort.create_cost_list(obj_features_mean, obj_features_std, rec_df)
             object_list = ort.label_object_list(object_list, cost_list, test_rgb_img, show=True)
 
-            pick_obj = object_list['1']
+            for item in object_list.keys():
+                if object_list[item].height[0] == 0:
+                    #if abs(object_list[item].rgb_area - 3*obj_features_mean.rgb_area.book)/obj_features_std.rgb_area.book > 1:
+                        #print "TOO SMALL/BIG TO BE BOOK"
+                        #del object_list[item]
+                    if object_list[item].name != 'cd':
+                        print "TO BE DELETED: ",item
+                        del object_list[item]
+                        
+            if len(object_list) == 0:
+                "THERE IS NOTHING INSIDE!!!!!!!!!!!"
+            
+            pick_obj = object_list.values()[0]
             
             print "==========================================="
             print "        OBJECT IS: ", pick_obj.name
@@ -252,46 +269,83 @@ def main():
 
             add_to_csv("testing_object_features.csv", object_df)
             
-            ipt = object_ipt_dict[pick_obj.name][0]
-            if object_ipt_dict[pick_obj.name][1] == 'rgb':
-                x_pix = pick_obj.rgb_centre[0]
-                y_pix = pick_obj.rgb_centre[1]
-            else:
-                x_pix = pick_obj.centre[0]
-                y_pix = pick_obj.centre[1]
-            
-            print "~~~~~~~~~~~~~~ OBJECT ATTRIBUTES ~~~~~~~~~~~~~~~"
-            print "Height:       ", pick_obj.height
-
-
-            print "RGB Aspect:   ", pick_obj.rgb_aspect
-            try:
-                print "Circularness: ", pick_obj.circularness
-            except:
-                print "no depth"
-            
+            ########### Find Circles for Pix3world transformation ################
             circles = depth_cali[4]
             cali_circles_init = circles-circles[0][0]
             cali_circles=[]
             for circ in cali_circles_init[0]:
                 cali_circles.append([circ[0]/2, circ[1]/2])
-            print x_pix, y_pix
+
             print cali_circles
             
-            p=[x_pix,y_pix]
+            p1, inverse = vc.pix3world_cal(cali_circles[0],cali_circles[2], cali_circles[1])
             
-            plt.figure("Circles")
-            cv2.circle(test_rgb_img,(int(x_pix),int(y_pix)),3,(0,0,255),1)
-            cv2.circle(test_rgb_img,(int(x_pix),int(y_pix)),2,(0,0,255),1)
-            plt.imshow(test_rgb_img)
-            #plt.show()
-            cv2.imwrite("test_rgb_img_centre.jpg", test_rgb_img)
             
-            p1, inverse = pix3world_cal(cali_circles[0],cali_circles[2], cali_circles[1])
-            x,y = pix3world(p1, inverse, p)
-            x = x[0,0]
-            y = y[0,0]
-            print x,y
+            ################ Find the suction or grasping points in pixels ###########
+            ipt = object_ipt_dict[pick_obj.name][0]
+            
+            if ipt>5:
+                print "OBJECT TO BE PICKED BY GRASPING"
+                first_node, node1, node2 = gp.first_grasping_point(pick_obj)
+                current_line = gp.find_perpendicular_line(node1, node2[0])
+                possible_pairs = gp.find_possible_cross_pairs(pick_obj, first_node, current_line)
+                possible_pairs = gp.remove_duplicates(possible_pairs, node1, node2[0])
+                possible_second_node, possible_grasp_centre = gp.find_second_grasping_point(possible_pairs, 
+                                                                                            first_node, 
+                                                                                            pick_obj)
+                second_node, grasp_centre = gp.determine_best_grasping_point(possible_second_node, 
+                                                                             possible_grasp_centre,
+                                                                             first_node)
+                
+                if ipt==7:
+                    first_node, second_node = gp.fix_torch_orientation(pick_obj, rgb_normclean, first_node, second_node)
+                    
+                gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=True)
+                
+                p_cc = [first_node[0], first_node[1]]
+                X, Y = vc.pix3world(p1, inverse, p_cc)
+                cc = X,Y
+                
+                p_ce = [second_node[0], second_node[1]]
+                X, Y = vc.pix3world(p1, inverse, p_ce)
+                ce = X,Y
+                
+                X, Y, Z, ori, aoa, Size = og.get_grasping_coords(cc,ce,25)
+                
+            else:
+                print "OBJECT TO BE PICKED BY SUCTION"
+                if object_ipt_dict[pick_obj.name][1] == 'rgb':
+                    x_pix = pick_obj.rgb_centre[0]
+                    y_pix = pick_obj.rgb_centre[1]
+                else:
+                    x_pix = pick_obj.centre[0]
+                    y_pix = pick_obj.centre[1]
+                
+                p = [x_pix, y_pix]
+                x,y = vc.pix3world(p1, inverse, p)
+                x = x[0,0]
+                y = y[0,0]
+                
+                plt.figure("Circles")
+                show_img = copy.copy(test_rgb_img)
+                cv2.circle(show_img,(int(x_pix),int(y_pix)),3,(0,0,255),1)
+                cv2.circle(show_img,(int(x_pix),int(y_pix)),2,(0,0,255),1)
+                plt.imshow(show_img)
+                #plt.show()
+                cv2.imwrite("test_rgb_img_centre.jpg", show_img)
+                
+            
+            print "~~~~~~~~~~~~~~ OBJECT ATTRIBUTES ~~~~~~~~~~~~~~~"
+            if ipt>5:
+                print "GRASPING"
+            else:
+                print "SUCTION"
+            print "Height:       ", pick_obj.height
+            print "RGB Aspect:   ", pick_obj.rgb_aspect
+            try:
+                print "Circularness: ", pick_obj.circularness
+            except:
+                print "no depth"
             
             #ipt = int(raw_input("object 1-10: "))
             #x = float(raw_input("x :"))
@@ -329,20 +383,20 @@ def main():
                 msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,y,z,4,x=X)
             elif ipt==6: #mug
                 Shelf = int(raw_input("shelf: "))
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,-200,-400,z=20,angle_of_attack=89.9,shelf=Shelf,size=6)
+                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=Shelf,size=6)
                 msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-20,z=Z,orientation=0,object_height=65.0,n=2)
             elif ipt==7: #torch
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,-200,-400,z=6,angle_of_attack=89.9,shelf=1,size=12,xoff=20,zoff=-50)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-10,z=Z,orientation=0,object_height=21.0,xoff=20,zoff=9,n=2)
+                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=6,angle_of_attack=89.9,orientation=ori,shelf=1,size=12,xoff=20,zoff=-50,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-10,z=Z,orientation=0,object_height=17.0,xoff=20,zoff=9,n=2,obj=ipt)
             elif ipt==8: #duct_tape
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,-200,-400,z=15,angle_of_attack=89.9,shelf=2,size=20)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=0,object_height=48.0,n=2)
+                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=15,angle_of_attack=89.9,orientation=ori,shelf=2,size=20)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=0,object_height=48.0,xoff=25,n=2)
             elif ipt==9: #banana
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,-200,-400,z=8,angle_of_attack=89.9,shelf=3,size=25,xoff=20,zoff=-20)
+                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=8,angle_of_attack=89.9,orientation=ori,shelf=3,size=25,xoff=20,zoff=-20)
                 msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=0,object_height=33.0,xoff=20,n=2)
             elif ipt==10: #tennis_ball
-                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,-200,-400,z=20,angle_of_attack=89.9,shelf=4,size=50)
-                #msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=90.0,object_height=65.0,n=2)
+                msg,x,y,Z = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=4,size=50,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,y-17,z=Z,orientation=90.0,object_height=65.0,n=2,obj=ipt)
             clr = copy.deepcopy(uw.empty_led)
             lf.illuminate_cluster(ser_led,1,colour=clr)
             ic.led_serial_send(ser_led,"I",2,0,2,0)
