@@ -297,6 +297,9 @@ def main():
                                                                              possible_grasp_centre,
                                                                              first_node)
                 
+                if ipt==7:
+                    first_node, second_node = gp.fix_torch_orientation(pick_obj, rgb_normclean, first_node, second_node)
+                    
                 gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=True)
                 
                 p_cc = [first_node[0], first_node[1]]
@@ -516,9 +519,8 @@ def main():
             print og.vac_pick(c, ser_ee, ser_vac, y, z, shelf)
         if task == "shelf":
             shelf = int(raw_input("shelf: "))
-            #print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.grab_home_joints),CMD=2)
-            print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_grab_joints_waypoint),CMD=2)
-            #print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_grab_joints[shelf]),CMD=2)
+            #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
+            print ic.safe_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints[shelf]),CMD=2)
             #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(uw.shelf_joints_waypoint),CMD=2)
             #print ic.safe_ur_move(c,ser_ee,ser_vac,Pose=dict(shelf_home_joints),CMD=2)
         if task == "shelf_home":

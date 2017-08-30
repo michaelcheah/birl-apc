@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 import cv2
 import copy
 from scipy.spatial.distance import cdist
+import vision_tools as vt
 
 def pnt2line(pnt, start, end):
     line_vec = end-start
@@ -62,6 +63,9 @@ def find_point_generation(point, family):
     
     return point_generation
 
+def farthest_node(node, nodes):
+    return nodes[cdist([node], nodes).argmax()], cdist([node], nodes).argmax()
+
 def closest_node(node, nodes):
     return nodes[cdist([node], nodes).argmin()], cdist([node], nodes).argmin()
 
@@ -71,7 +75,34 @@ def first_grasping_point(table_object):
     for points in closest_contour['contour'][0]:
         current_cnt.append(points[0])
         
-    first_node1, node1_id = closest_node(table_object.centre, current_cnt)
+    if table_object.name=='mug' or table_object.name=='ball':
+        centre, radius = cv2.minEnclosingCircle(closest_contour['contour'][0])
+        
+        outer_contour = {}
+        for member in table_object.nuclear:
+            if closest_contour['id'] in member['children']:
+                outer_contour = member
+        
+        if len(outer_contour)==0:
+            outer_contour = closest_contour
+        
+        current_outer_contour = []
+        for points in outer_contour['contour'][0]:
+            current_outer_contour.append(points[0])
+        
+        mug_edge, mug_edge_id = farthest_node(table_object.centre, current_outer_contour)
+        
+        plt.figure()
+        another_img = cv2.circle(copy.copy(test_rgb_img),
+                                 (int(mug_edge[0]),int(mug_edge[1])),2,(255,0,0),3)
+        plt.imshow(another_img)
+        plt.show()
+            
+        first_node1, node1_id = farthest_node(mug_edge, current_cnt)
+    
+    else:
+        first_node1, node1_id = closest_node(table_object.centre, current_cnt)
+        
     first_neighbours = closest_contour['contour'][0][node1_id-1:node1_id+2:2]
     
     dist1, first_neighbour1 = pnt2line(table_object.centre, first_node1, first_neighbours[0][0])
@@ -188,3 +219,69 @@ def display_grasping_points(image, first_node, second_node, grasp_centre, table_
         plt.figure("Grasping Points")
         plt.imshow(show_img)
         plt.show()
+        
+def fix_torch_orientation(table_object, rgb_normclean, fnode, snode):
+    first_node = copy.copy(fnode)
+    second_node = copy.copy(snode)
+    
+    box = cv2.minAreaRect(table_object.contour[0])
+    box = cv2.boxPoints(box)
+    box = np.array(box, dtype="int")
+    box_points = order_points(box)
+    
+    # Make the first two and last two entries the shorter edges
+    if cdist([box_points[0]], [box_points[1]])>cdist([box_points[1]], [box_points[2]]):
+        box_points = np.roll(box_points, 2)
+    
+    half_vect = (box_points[1]-box_points[2])/2
+    half_points = np.append([(box_points[1]+box_points[2])/2], [(box_points[3]+box_points[0])/2], axis=0)
+    
+    box1_limits = half_points[::-1]+half_vect*1.3
+    box2_limits = half_points-half_vect*1.3
+    
+    np.clip(box1_limits, [0,0], [np.shape(test_img)[0], np.shape(test_img)[1]], out=box1_limits)
+    np.clip(box2_limits, [0,0], [np.shape(test_img)[0], np.shape(test_img)[1]], out=box2_limits)
+    
+    box1 = np.append(box1_limits, half_points, axis=0).astype("int")
+    box2 = np.append(half_points[::-1], box2_limits, axis=0).astype("int")
+    
+    norm_half_vect = half_vect/np.sqrt(np.sum(half_vect**2))
+                                       
+    grasp_matrix = np.matrix([[norm_half_vect[1], norm_half_vect[0]], 
+                             [-norm_half_vect[0], norm_half_vect[1]]])
+    
+    mask1 = vt.create_contour_mask([box1], test_img)
+    mask2 = vt.create_contour_mask([box2], test_img)
+
+    box1_avg = np.mean(test_img[mask1==255])
+    box2_avg = np.mean(test_img[mask2==255])
+    
+    first_check=first_node*grasp_matrix
+    second_check=second_node*grasp_matrix
+    if box1_avg>box2_avg:
+        if first_check[0,0]>second_check[0,0]:
+            print "TORCH GRASP CORRECT 1"
+        else:
+            print "TORCH GRASP WRONG 1"
+            first_node = snode
+            second_node = fnode
+    else:
+        if first_check[0,0]<second_check[0,0]:
+            print "TORCH GRASP CORRECT 2"
+        else:
+            print "TORCH GRASP WRONG 2"
+            first_node = snode
+            second_node = fnode
+            
+    return first_node, second_node
+
+def order_points(pts):
+    pts = pts[np.argsort(pts[:,0])]
+    left_pts = pts[:2][np.argsort(pts[:2][:,1])]
+    tl = left_pts[0]
+    bl = left_pts[1]
+    right_pts = pts[2:4][np.argsort(pts[2:4][:,1])]
+    tr = right_pts[0]
+    br = right_pts[1]
+    return np.array([tl, tr, br, bl], dtype="float32")
+    
