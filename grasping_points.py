@@ -75,31 +75,47 @@ def first_grasping_point(table_object):
     for points in closest_contour['contour'][0]:
         current_cnt.append(points[0])
         
-    if table_object.name=='mug' or table_object.name=='ball':
+    if table_object.name=='ball':
+        #centre, radius = cv2.minEnclosingCircle(closest_contour['contour'][0])
+        
+        #outer_contour = {}
+        #for member in table_object.nuclear:
+            #if closest_contour['id'] in member['children']:
+                #outer_contour = member
+        
+        #if len(outer_contour)==0:
+            #outer_contour = closest_contour
+        
+        #outer_centre, radius = cv2.minEnclosingCircle(outer_contour['contour'][0])
+        
+        #current_outer_contour = []
+        #for points in outer_contour['contour'][0]:
+            #current_outer_contour.append(points[0])
+        
+        #ball_edge, ball_edge_id = farthest_node(table_object.centre, current_outer_contour)
+        #first_node1, node1_id = ball_edge, ball_edge_id#farthest_node(mug_edge, current_cnt)
+        
+        #closest_contour = outer_contour
+        
+        #test_rgb_img = cv2.imread("test_rgb_img.jpg")
+        #plt.figure()
+        #another_img = cv2.circle(copy.copy(test_rgb_img),
+                                 #(int(ball_edge[0]),int(ball_edge[1])),2,(255,0,0),3)
+        #another_img = cv2.circle(copy.copy(another_img),
+                                 #(int(centre[0]),int(centre[1])),2,(0,255,0),3)
+        #plt.imshow(another_img)
+        #plt.show()
+        #cv2.imwrite("test_rgb_img_special.jpg", another_img)
+        centre_offset = np.array([np.sqrt(table_object.area),np.sqrt(table_object.area)])
+        new_centre = np.array(table_object.centre)+centre_offset
+        first_node1, node1_id = closest_node(new_centre, current_cnt)
+        
+        
+    elif table_object.name == "mug":
         centre, radius = cv2.minEnclosingCircle(closest_contour['contour'][0])
-        
-        outer_contour = {}
-        for member in table_object.nuclear:
-            if closest_contour['id'] in member['children']:
-                outer_contour = member
-        
-        if len(outer_contour)==0:
-            outer_contour = closest_contour
-        
-        current_outer_contour = []
-        for points in outer_contour['contour'][0]:
-            current_outer_contour.append(points[0])
-        
-        mug_edge, mug_edge_id = farthest_node(table_object.centre, current_outer_contour)
-        
-        plt.figure()
-        another_img = cv2.circle(copy.copy(test_rgb_img),
-                                 (int(mug_edge[0]),int(mug_edge[1])),2,(255,0,0),3)
-        plt.imshow(another_img)
-        plt.show()
-            
-        first_node1, node1_id = farthest_node(mug_edge, current_cnt)
-    
+        centre_offset = np.array(centre)-np.array(table_object.centre)
+        new_centre = np.array(centre)+centre_offset
+        first_node1, node1_id = closest_node(new_centre, current_cnt)
     else:
         first_node1, node1_id = closest_node(table_object.centre, current_cnt)
         
@@ -120,6 +136,10 @@ def first_grasping_point(table_object):
     else:
         first_node = first_neighbour1
         first_node2 = first_neighbours[0]
+    
+    #if table_object.name == "ball":
+        #first_node2 = outer_centre
+        #print outer_centre
     
     return first_node, first_node1, first_node2
 
@@ -219,8 +239,10 @@ def display_grasping_points(image, first_node, second_node, grasp_centre, table_
         plt.figure("Grasping Points")
         plt.imshow(show_img)
         plt.show()
+    return show_img
         
 def fix_torch_orientation(table_object, rgb_normclean, fnode, snode):
+    test_img = copy.copy(rgb_normclean)
     first_node = copy.copy(fnode)
     second_node = copy.copy(snode)
     

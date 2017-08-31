@@ -490,8 +490,13 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
     # Release object
     #demand_Grip["servo"]=10
     #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
-
-    for i in range(0,81):
+    if obj==7:
+        demand_Grip["servo"]=23
+    	msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+        demand_Grip["act"]=object_size-10
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+    
+    for i in range(23,81):
         #print "Sending end effector move"
         ser_ee.flush
         # Set Actuator position, min = 0, max = 80
@@ -502,6 +507,7 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
             #print ipt
             if ipt == "done\r\n":
                 break
+        #time.sleep(0.005*(80-i))
 
     #demand_Grip["servo"]=20
     #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
@@ -617,10 +623,10 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
 
         demand_Pose["x"]=current_Pose[0]+110+xoffset
-        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.05,CMD=8)
 
         demand_Pose["x"]=current_Pose[0]+113+xoffset
-        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.05,CMD=8)
 
         demand_Grip["servo"]=0
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
@@ -630,9 +636,11 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         clr[4]=[0,0,255]
         lf.illuminate_cluster(ser_led,2,colour=clr)
 
-        demand_Pose["x"]=current_Pose[0]-30+xoffset
-        demand_Pose["z"]=current_Pose[2]+object_height+zoffset+5
-        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
+        demand_Pose["z"]=current_Pose[2]+object_height+zoffset+30
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.10,CMD=8)
+
+        demand_Pose["x"]=current_Pose[0]-10+xoffset
+        msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.15,CMD=8)
     elif obj==7 or obj==10:
         # Reset tool to tcp_1
         ic.socket_send(c,sCMD=101)
@@ -656,7 +664,7 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         print "timeout: ", timeout
         ser_ee.flush
 
-        demand_Grip["act"] = int(80.0-0.6*object_height)-8
+        demand_Grip["act"] = int(80.0-0.6*object_height)-12
         demand_Pose["x"]=stored_x+10
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.1,CMD=8)
 
@@ -702,6 +710,13 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
     msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
     # Release object
+    demand_Grip["servo"]=50
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
+    time.sleep(0.3)
+    demand_Grip["servo"]=30
+    msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+
     demand_Grip["servo"]=50
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
 

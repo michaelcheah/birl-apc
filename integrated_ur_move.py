@@ -54,6 +54,7 @@ def initialize():
     #HOST = "169.254.103.235" # The remote host
     #HOST = "192.168.1.105" # The remote host
     HOST = "169.254.242.158"
+    #HOST = "169.254.152.59"
     PORT = 30000 # The same port as used by the server
 
     print ".......................Starting Program......................."
@@ -104,7 +105,7 @@ def main():
         task = raw_input("task: ")
         
         if task == "lf":
-            lf.illuminate_cluster(ser_led,4,colour=[[0,0,0],[255,103,23],[0,0,0],[0,0,0],[255,103,23],[0,0,0]])
+            lf.illuminate_cluster(ser_led,7,colour=[[255,255,255],[255,255,255],[255,255,255],[255,255,255],[255,255,255],[255,255,255]])
         
         ################ Calibration Step if needed #######################################
         if task == "calibrate":
@@ -287,12 +288,20 @@ def main():
             if ipt>5:
                 print "OBJECT TO BE PICKED BY GRASPING"
                 first_node, node1, node2 = gp.first_grasping_point(pick_obj)
+                #imgimg = gp.display_grasping_points(test_rgb_img, first_node, node1, node2[0], pick_obj, show=True)
+                
                 current_line = gp.find_perpendicular_line(node1, node2[0])
+                if ipt == 10:
+                    perp_vect = np.array(first_node-pick_obj.centre)
+                    print "PERPERP",perp_vect
+                    current_line = [perp_vect[0], perp_vect[1]]
                 possible_pairs = gp.find_possible_cross_pairs(pick_obj, first_node, current_line)
                 possible_pairs = gp.remove_duplicates(possible_pairs, node1, node2[0])
+                print "CURRENT_LINE: ", current_line
                 possible_second_node, possible_grasp_centre = gp.find_second_grasping_point(possible_pairs, 
                                                                                             first_node, 
                                                                                             pick_obj)
+                print "POSSIBLE_SECOND_NODE AND GRASP_CENTRE: ", possible_second_node, possible_grasp_centre
                 second_node, grasp_centre = gp.determine_best_grasping_point(possible_second_node, 
                                                                              possible_grasp_centre,
                                                                              first_node)
@@ -300,8 +309,9 @@ def main():
                 if ipt==7:
                     first_node, second_node = gp.fix_torch_orientation(pick_obj, rgb_normclean, first_node, second_node)
                     
-                gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=True)
-                
+                imgimg=gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=True)
+                cv2.imwrite("testing_imgimg.jpg", imgimg)
+
                 p_cc = [first_node[0], first_node[1]]
                 X, Y = vc.pix3world(p1, inverse, p_cc)
                 cc = X,Y
@@ -374,7 +384,7 @@ def main():
             if ipt==4: #tape_measure
                 clr[2]=[0,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,2,z=90,yoff=-21)
+                msg,sx,sy,sz = og.vac_stow(c,ser_ee,ser_vac,ser_led,x,y,2,z=90,yoff=-21)
                 msg = og.vac_pick(c,ser_ee,ser_vac,ser_led,sy,sz,4,x=sx)
             if ipt==5: #box
                 clr[3]=[255,0,255]
@@ -384,13 +394,13 @@ def main():
             elif ipt==6: #mug
                 clr[0]=[255,64,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=0,size=6)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-20,z=sz,orientation=0,object_height=65.0,n=2)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=0,size=6,xoff=0)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-20,z=sz,orientation=0,object_height=65.0,xoff=10,zoff=2,n=2)
             elif ipt==7: #torch
                 clr[1]=[0,255,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=6,angle_of_attack=89.9,orientation=ori,shelf=1,size=12,xoff=0,zoff=0,obj=ipt)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sz,z=sz,orientation=0,object_height=19.0,xoff=0,zoff=0,n=2,obj=ipt,stored_x=sx)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=1,angle_of_attack=89.9,orientation=ori,shelf=1,size=4,xoff=0,zoff=0,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy,z=sz,orientation=0,object_height=13.0,xoff=2,zoff=0,n=2,obj=ipt,stored_x=sx)
             elif ipt==8: #duct_tape
                 clr[2]=[64,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
