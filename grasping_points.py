@@ -4,6 +4,9 @@ import cv2
 import copy
 from scipy.spatial.distance import cdist
 import vision_tools as vt
+import matplotlib.gridspec as gridspec
+import matplotlib.patches as mpatches
+import os
 
 def pnt2line(pnt, start, end):
     line_vec = end-start
@@ -118,8 +121,16 @@ def first_grasping_point(table_object):
         first_node1, node1_id = closest_node(new_centre, current_cnt)
     else:
         first_node1, node1_id = closest_node(table_object.centre, current_cnt)
-        
-    first_neighbours = closest_contour['contour'][0][node1_id-1:node1_id+2:2]
+    
+    if node1_id==0:
+        first_neighbours = closest_contour['contour'][0][node1_id+1]
+    else:
+        first_neighbours = closest_contour['contour'][0][node1_id-1:node1_id+2:2]
+    
+    print first_node1, node1_id
+    #print len(closest_contour['contour'][0])
+    #print closest_contour['contour'][0]
+    print "FIRST_NEIGHBOURS: ",first_neighbours
     
     dist1, first_neighbour1 = pnt2line(table_object.centre, first_node1, first_neighbours[0][0])
     
@@ -170,7 +181,7 @@ def find_possible_cross_pairs(table_object, first_node, current_line):
             sign1 = check1[0]*current_line[1] - check1[1]*current_line[0]
             sign2 = check2[0]*current_line[1] - check2[1]*current_line[0]
             
-            if sign1*sign2 <0:
+            if sign1*sign2 <=0:
                 possible_pairs.append([sec_cnt[i-1], sec_cnt[i]])
                 
     return possible_pairs
@@ -181,6 +192,7 @@ def remove_duplicates(possible_pairs, node1, node2):
             if np.array_equal(node2, pair[0]) or np.array_equal(node2, pair[1]):
                 print pair
                 possible_pairs.pop(-(pair_num+1))
+        #if np.array_equal(node2, pair[0]) or np.array_equal(node2, pair[1]):
     return possible_pairs
 
 def find_second_grasping_point(possible_pairs, first_node, table_object):
@@ -254,6 +266,8 @@ def fix_torch_orientation(table_object, rgb_normclean, fnode, snode):
     # Make the first two and last two entries the shorter edges
     if cdist([box_points[0]], [box_points[1]])>cdist([box_points[1]], [box_points[2]]):
         box_points = np.roll(box_points, 2)
+    print "SHORT DISTANCE: ",cdist([box_points[0]], [box_points[1]])
+    print "LONG DISTANCE:  ",cdist([box_points[1]], [box_points[2]])        
     
     half_vect = (box_points[1]-box_points[2])/2
     half_points = np.append([(box_points[1]+box_points[2])/2], [(box_points[3]+box_points[0])/2], axis=0)
@@ -287,6 +301,7 @@ def fix_torch_orientation(table_object, rgb_normclean, fnode, snode):
             print "TORCH GRASP WRONG 1"
             first_node = snode
             second_node = fnode
+            norm_half_vect = -norm_half_vect
     else:
         if first_check[0,0]<second_check[0,0]:
             print "TORCH GRASP CORRECT 2"
@@ -294,6 +309,11 @@ def fix_torch_orientation(table_object, rgb_normclean, fnode, snode):
             print "TORCH GRASP WRONG 2"
             first_node = snode
             second_node = fnode
+            norm_half_vect = -norm_half_vect
+    
+    if cdist([box_points[1]], [box_points[2]])<50:
+        first_node = first_node + norm_half_vect*7
+        second_node = second_node + norm_half_vect*7
             
     return first_node, second_node
 
@@ -307,3 +327,85 @@ def order_points(pts):
     br = right_pts[1]
     return np.array([tl, tr, br, bl], dtype="float32")
     
+def display_second_screen(normclean, sorted_family, object_list, cost_list, ipt, pick_obj):
+    red_patch = mpatches.Patch(color='red', label='First Grasp Point')
+    blue_patch = mpatches.Patch(color='blue', label='Centre Grasp Point')
+    green_patch = mpatches.Patch(color='green', label='Second Grasp Point')
+    cyan_patch = mpatches.Patch(color='cyan', label='Object Centre ')
+
+    plt.figure("SECOND SCREEN", figsize=(64,36))
+    gs = gridspec.GridSpec(90, 160)
+
+    ax1 = plt.subplot(gs[2:50, :40])
+    plt.title("Depth Profile", fontsize= 70)
+    plt.axis('off')
+
+    ax2 = plt.subplot(gs[:, 90:])
+    plt.title("Grasping Point", fontsize = 70)
+    plt.axis('off')
+
+    ax3 = plt.subplot(gs[:50, 40:90])
+    plt.axis('off')
+
+    ax4 = plt.subplot(gs[50:, :90])
+    plt.axis('off')
+
+    #print "COST LIST: ", cost_list
+    remain_data = ""
+    num_remain = 0
+    print "NUM OBJECTS TOTAL: ", len(object_list)
+    for i,item in enumerate(sorted(object_list.keys())):
+        if i > 0:
+            print cost_list[i].keys()[0]
+            remain_data = (remain_data+cost_list[i].keys()[0].capitalize()+", ")
+            num_remain = num_remain + 1
+    remain_data = remain_data[:-2]
+
+    if ipt>5:
+        img2 = cv2.imread("display_grasp_img.jpg")
+        
+        if ipt == 6:
+            img2 = vt.draw_min_bounding_rect(pick_obj.item_contour[0]*3, img2, color=(0,0,255))
+        else:
+            img2 = vt.draw_min_bounding_rect(pick_obj.contour[0]*3, img2, color=(0,0,255))
+        ax3.legend(handles=[red_patch, green_patch, blue_patch, cyan_patch],
+                   loc='lower right', bbox_to_anchor=(0.95, 0), 
+                   borderaxespad=0,prop={'size':60})
+        data = ("~~~~ OBJECT INFORMATION ~~~~ \n"
+                "First Object:                "+pick_obj.name.capitalize()+" \n"
+                "Pick Strategy:             "+"Grasping \n"
+                "Remaining Objects: "+ str((num_remain))+ " \n"+
+                remain_data)
+    else:
+        img2 = cv2.imread("display_suction_img.jpg")
+        if ipt==1 or ipt==2 or ipt==3 or ipt==4:
+            img2 = vt.draw_min_bounding_rect(pick_obj.item_contour[0], img2, color=(255,0,0))
+        else:
+            img2 = vt.draw_min_bounding_rect(pick_obj.contour[0], img2, color=(255,0,0))
+        ax3.legend(handles=[cyan_patch],
+                   loc='lower right', bbox_to_anchor=(0.95, 0), 
+                   borderaxespad=0,prop={'size':60})
+        data = ("~~~~ OBJECT INFORMATION ~~~~ \n"
+                "First Object:                "+pick_obj.name.capitalize()+" \n"
+                "Pick Strategy:             "+"Suction \n"
+                "Remaining Objects: "+ str((num_remain))+ " \n"+
+                remain_data)
+
+    ax3.text(0.05,0.65,data,bbox=dict(boxstyle="square",
+                       ec=(0.5, 0.5, 0.5),
+                       fc=(0.8, 0.8, 0.9),
+                       ),fontsize=50)   
+    disp_img = cv2.imread(os.path.join("screen_pic", '{}.JPG'.format(ipt)))
+    disp_img = cv2.cvtColor(disp_img, cv2.COLOR_RGB2BGR)
+
+    ax4.imshow(disp_img)
+
+    img = cv2.imread("display_depth_profile.jpg")
+
+    print np.shape(img)
+
+    ax1.imshow(img)
+    ax2.imshow(img2)
+    
+    plt.savefig("second_screen.png")
+    return img, img2

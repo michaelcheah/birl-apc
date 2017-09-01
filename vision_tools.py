@@ -309,3 +309,19 @@ def normclean2cv2(image):
     img = img*255
     img = img.astype("uint8")
     return img
+
+def draw_min_bounding_rect(contour, image, color=(0,255,0)):
+    img = copy.copy(image)
+    x, y, w, h = cv2.boundingRect(contour)
+    # draw a green rectangle to visualize the bounding rect
+    cv2.rectangle(img, (x,y), (x+w, y+h), color, 2)
+ 
+    # get the min area rect
+    #rect = cv2.minAreaRect(contour)
+    #box = cv2.boxPoints(rect)
+    #print box
+    # convert all coordinates floating point values to int
+    #box = np.array(box, dtype="int")
+    # draw a red 'nghien' rectangle
+    #cv2.drawContours(img, [box], 0, (0, 255, 0),2)
+    return img

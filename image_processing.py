@@ -181,7 +181,7 @@ def run_image_processing_v2_depth(test_all, depth_cal, show=True):
     new_cnts, new_h = kv.extract_depth_contours(cnts, hierarchy, 
                                                 normclean*255, 
                                                 minsize=200,
-                                                show=True)
+                                                show=show)
     if len(new_cnts)>0:
         family = kv.create_family(new_cnts, new_h)
         sorted_family = kv.sort_family(family, normclean, show=False, debug=False)

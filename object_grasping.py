@@ -94,7 +94,7 @@ def vac_stow(c,ser_ee,ser_vac,ser_led,x,y,shelf,z=110,yoff=0):
 
     # Raise end to object_height above the shelf
     current_Pose = ic.get_ur_position(c,1)
-    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Pose = {"x":current_Pose[0],"y":current_Pose[1]+yoff,"z":current_Pose[2]+object_height+10,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
 
     # Move to back of shelf
@@ -391,6 +391,7 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
 
     # Linear move to grasping position
     demand_Pose = {"x":x,"y":y,"z":z,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
+    demand_Grip["servo"]=30
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=8,Speed=0.4)
 
     # Grab with reduced chance of collision
@@ -419,12 +420,10 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
     # Close grabber servo
     demand_Grip["servo"]=0
     msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
-
     time.sleep(0.5)
     # Lift object
     demand_Pose = {"x":current_Pose[0],"y":current_Pose[1],"z":z+100,"rx":current_Pose[3],"ry":current_Pose[4],"rz":current_Pose[5]}
     msg = ic.safe_ur_move(c,Pose=dict(demand_Pose),CMD=4)
-
     ic.socket_send(c,sCMD=101)
 
     # Move safely towards shelf
@@ -491,12 +490,12 @@ def grab_stow(c,ser_ee,ser_vac,ser_led,x,y,z=25,orientation=0,angle_of_attack=0,
     #demand_Grip["servo"]=10
     #msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     if obj==7:
-        demand_Grip["servo"]=23
-    	msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
-        demand_Grip["act"]=object_size-10
+        #demand_Grip["servo"]=23
+    	#msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
+        demand_Grip["act"]=object_size-2
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,CMD=4)
     
-    for i in range(23,81):
+    for i in range(0,81):
         #print "Sending end effector move"
         ser_ee.flush
         # Set Actuator position, min = 0, max = 80
@@ -614,8 +613,6 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         demand_Pose["x"]=current_Pose[0]+185.0+xoffset
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
-        #ipt = raw_input("Continue?")
-
         demand_Pose["z"]=current_Pose[2]+object_height+zoffset-20
         demand_Grip["servo"]=80
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
@@ -627,7 +624,7 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
 
         demand_Pose["x"]=current_Pose[0]+113+xoffset
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.05,CMD=8)
-
+        
         demand_Grip["servo"]=0
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.25,CMD=8)
 
@@ -667,7 +664,7 @@ def grab_pick(c,ser_ee,ser_vac,ser_led,y,z=12,orientation=0,object_height=30.0,s
         demand_Grip["act"] = int(80.0-0.6*object_height)-12
         demand_Pose["x"]=stored_x+10
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.1,CMD=8)
-
+        
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
         msg = ic.safe_move(c,ser_ee,ser_vac,Pose=dict(demand_Pose),Grip=demand_Grip,Speed=0.2,CMD=4)
 

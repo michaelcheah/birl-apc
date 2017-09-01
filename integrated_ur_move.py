@@ -39,6 +39,8 @@ from tableObject_class import TableObject, match_rgb_with_depth, match_rgb_with_
 
 import grasping_points as gp
 
+SHOW = False
+#plt.ion()
 object_ipt_dict = {'cd':      [1,'rgb'],
                    'book':    [2,'rgb'],
                    'eraser':  [3,'rgb'],
@@ -242,10 +244,10 @@ def main():
 
             rec_df = ort.prepare_pick_obj_features_param(object_list, excluded_val, extras)
             cost_list = ort.create_cost_list(obj_features_mean, obj_features_std, rec_df)
-            object_list = ort.label_object_list(object_list, cost_list, test_rgb_img, show=True)
+            object_list = ort.label_object_list(object_list, cost_list, test_rgb_img, show=SHOW)
 
             for item in object_list.keys():
-                if object_list[item].height[0] == 0:
+                if object_list[item].height[1] == 0:
                     #if abs(object_list[item].rgb_area - 3*obj_features_mean.rgb_area.book)/obj_features_std.rgb_area.book > 1:
                         #print "TOO SMALL/BIG TO BE BOOK"
                         #del object_list[item]
@@ -289,28 +291,40 @@ def main():
                 print "OBJECT TO BE PICKED BY GRASPING"
                 first_node, node1, node2 = gp.first_grasping_point(pick_obj)
                 #imgimg = gp.display_grasping_points(test_rgb_img, first_node, node1, node2[0], pick_obj, show=True)
-                
+                print "FIRST NODES: ", first_node, node1, node2
                 current_line = gp.find_perpendicular_line(node1, node2[0])
                 if ipt == 10:
                     perp_vect = np.array(first_node-pick_obj.centre)
                     print "PERPERP",perp_vect
                     current_line = [perp_vect[0], perp_vect[1]]
                 possible_pairs = gp.find_possible_cross_pairs(pick_obj, first_node, current_line)
+                #print "Initial Possible Pairs: ", possible_pairs
                 possible_pairs = gp.remove_duplicates(possible_pairs, node1, node2[0])
                 print "CURRENT_LINE: ", current_line
+                print "POSSIBLE_PAIRS: ", possible_pairs
                 possible_second_node, possible_grasp_centre = gp.find_second_grasping_point(possible_pairs, 
                                                                                             first_node, 
                                                                                             pick_obj)
-                print "POSSIBLE_SECOND_NODE AND GRASP_CENTRE: ", possible_second_node, possible_grasp_centre
+                print "POSSIBLE_SECOND_NODE AND GRASP_CENTRE: "
+                print possible_second_node
+                print possible_grasp_centre
+                for snode_id,snode in enumerate(list(reversed(possible_second_node))):
+                    if np.array_equal(snode, first_node):
+                        print snode 
+                        possible_second_node.pop(-(snode_id+1))
+                        possible_grasp_centre.pop(-(snode_id+1))
+                        
+                
                 second_node, grasp_centre = gp.determine_best_grasping_point(possible_second_node, 
                                                                              possible_grasp_centre,
                                                                              first_node)
+                print "SECOND NODE: ",second_node
                 
                 if ipt==7:
                     first_node, second_node = gp.fix_torch_orientation(pick_obj, rgb_normclean, first_node, second_node)
                     
-                imgimg=gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=True)
-                cv2.imwrite("testing_imgimg.jpg", imgimg)
+                grasp_img=gp.display_grasping_points(test_rgb_img, first_node, second_node, grasp_centre, pick_obj, show=SHOW)
+                cv2.imwrite("display_grasp_img.jpg", grasp_img)
 
                 p_cc = [first_node[0], first_node[1]]
                 X, Y = vc.pix3world(p1, inverse, p_cc)
@@ -336,13 +350,15 @@ def main():
                 x = x[0,0]
                 y = y[0,0]
                 
-                plt.figure("Circles")
                 show_img = copy.copy(test_rgb_img)
                 cv2.circle(show_img,(int(x_pix),int(y_pix)),3,(0,0,255),1)
                 cv2.circle(show_img,(int(x_pix),int(y_pix)),2,(0,0,255),1)
-                plt.imshow(show_img)
-                #plt.show()
-                cv2.imwrite("test_rgb_img_centre.jpg", show_img)
+                
+                if SHOW:
+                    plt.figure("Circles")
+                    plt.imshow(show_img)
+                    plt.show()
+                cv2.imwrite("display_suction_img.jpg", show_img)
                 
             
             print "~~~~~~~~~~~~~~ OBJECT ATTRIBUTES ~~~~~~~~~~~~~~~"
@@ -356,6 +372,20 @@ def main():
                 print "Circularness: ", pick_obj.circularness
             except:
                 print "no depth"
+                
+            copy_img = copy.copy((normclean*255).astype('uint8'))
+            copy_img = cv2.cvtColor(copy_img, cv2.COLOR_GRAY2RGB)
+            if sorted_family is not None:
+                for member in sorted_family:
+                    cv2.drawContours(copy_img, [member['contour'][0]], -1, (5,205,5), 1)
+            cv2.imwrite("display_depth_profile.jpg", copy_img)
+            gp.display_second_screen(normclean, sorted_family, object_list, cost_list, ipt, pick_obj)
+            #plt.show(block=False)
+            while(1):
+                continue_check = raw_input("Continue?:  ")
+                if continue_check != "no":
+                    break
+            
             
             #ipt = int(raw_input("object 1-10: "))
             #x = float(raw_input("x :"))
@@ -399,8 +429,8 @@ def main():
             elif ipt==7: #torch
                 clr[1]=[0,255,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=1,angle_of_attack=89.9,orientation=ori,shelf=1,size=4,xoff=0,zoff=0,obj=ipt)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy,z=sz,orientation=0,object_height=13.0,xoff=2,zoff=0,n=2,obj=ipt,stored_x=sx)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=1,angle_of_attack=89.9,orientation=ori,shelf=1,size=12,xoff=0,zoff=0,obj=ipt)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy,z=sz,orientation=0,object_height=17.0,xoff=2,zoff=0,n=2,obj=ipt,stored_x=sx)
             elif ipt==8: #duct_tape
                 clr[2]=[64,255,0]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
@@ -409,13 +439,14 @@ def main():
             elif ipt==9: #banana
                 clr[3]=[64,64,255]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
-                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=8,angle_of_attack=89.9,orientation=ori,shelf=3,size=25,xoff=20,zoff=-30)
-                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-17,z=sz,orientation=0,object_height=33.0,xoff=30,n=2)
+                msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=8,angle_of_attack=89.9,orientation=ori,shelf=3,size=28,xoff=20,zoff=-30)
+                msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy-17,z=sz,orientation=0,object_height=33.0,xoff=27,n=2)
             elif ipt==10: #tennis_ball
                 clr[4]=[255,0,64]
                 clr[5]=[255,0,64]
                 lf.illuminate_cluster(ser_led,1,colour=clr)
                 msg,sx,sy,sz = og.grab_stow(c,ser_ee,ser_vac,ser_led,X,Y,z=20,angle_of_attack=89.9,orientation=ori,shelf=4,size=50,zoff=-45,obj=ipt)
+                pt = raw_input("continue?")
                 msg = og.grab_pick(c,ser_ee,ser_vac,ser_led,sy,z=sz,orientation=0,object_height=65.0,n=2,obj=ipt,stored_x=sx)
             clr = copy.deepcopy(uw.empty_led)
             lf.illuminate_cluster(ser_led,1,colour=clr)
